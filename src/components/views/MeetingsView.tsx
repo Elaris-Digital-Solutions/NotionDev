@@ -1,10 +1,10 @@
-import { Calendar, Clock, Users, Plus, Video, FileText } from "lucide-react";
+import { Calendar, Clock, Users, Plus, Video, FileText, Trash } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Meeting } from '@/types/workspace';
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -35,6 +35,23 @@ export function MeetingsView() {
         ...m,
         participants: m.attendees?.map((a: any) => a.user?.email || 'Unknown') || []
       })) as Meeting[];
+    }
+  });
+
+  const deleteMeeting = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('meetings')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+      toast.success("Reunión eliminada");
+    },
+    onError: (error) => {
+      toast.error("Error al eliminar reunión: " + error.message);
     }
   });
 
@@ -79,7 +96,12 @@ export function MeetingsView() {
           {todayMeetings.length > 0 ? (
             <div className="space-y-3">
               {todayMeetings.map((meeting) => (
-                <MeetingCard key={meeting.id} meeting={meeting} isToday />
+                <MeetingCard 
+                  key={meeting.id} 
+                  meeting={meeting} 
+                  isToday 
+                  onDelete={() => deleteMeeting.mutate(meeting.id)}
+                />
               ))}
             </div>
           ) : (
@@ -98,7 +120,11 @@ export function MeetingsView() {
           <div className="space-y-3">
             {upcomingMeetings.length > 0 ? (
               upcomingMeetings.map((meeting) => (
-                <MeetingCard key={meeting.id} meeting={meeting} />
+                <MeetingCard 
+                  key={meeting.id} 
+                  meeting={meeting} 
+                  onDelete={() => deleteMeeting.mutate(meeting.id)}
+                />
               ))
             ) : (
               <div className="text-muted-foreground text-sm">No hay reuniones próximas</div>
@@ -113,9 +139,10 @@ export function MeetingsView() {
 interface MeetingCardProps {
   meeting: Meeting;
   isToday?: boolean;
+  onDelete: () => void;
 }
 
-function MeetingCard({ meeting, isToday: isTodayMeeting }: MeetingCardProps) {
+function MeetingCard({ meeting, isToday: isTodayMeeting, onDelete }: MeetingCardProps) {
   const date = new Date(meeting.date);
   const participants = meeting.participants || [];
 
@@ -172,6 +199,19 @@ function MeetingCard({ meeting, isToday: isTodayMeeting }: MeetingCardProps) {
             <Button variant="outline" size="sm" className="gap-1">
               <Video className="w-4 h-4" />
               Unirse
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm('¿Estás seguro de eliminar esta reunión?')) {
+                  onDelete();
+                }
+              }}
+            >
+              <Trash className="w-4 h-4" />
             </Button>
           </div>
         </div>
