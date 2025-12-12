@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [useMagicLink, setUseMagicLink] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -19,7 +20,19 @@ export default function Login() {
     setLoading(true);
     
     try {
-      if (isSignUp) {
+      if (useMagicLink) {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: window.location.origin,
+          },
+        });
+        if (error) throw error;
+        toast({ 
+          title: "Check your email", 
+          description: "We sent you a magic link to sign in." 
+        });
+      } else if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -55,10 +68,12 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">
-            {isSignUp ? "Create an account" : "Welcome Back"}
+            {isSignUp ? "Create an account" : (useMagicLink ? "Sign in with Magic Link" : "Welcome Back")}
           </CardTitle>
           <CardDescription className="text-center">
-            {isSignUp ? "Enter your details to get started" : "Enter your credentials to access your account"}
+            {isSignUp 
+              ? "Enter your details to get started" 
+              : (useMagicLink ? "We'll send a link to your email" : "Enter your credentials to access your account")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -86,33 +101,54 @@ export default function Login() {
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+            
+            {!useMagicLink && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required={!useMagicLink}
+                />
+              </div>
+            )}
+
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+              {loading ? 'Loading...' : (
+                useMagicLink ? 'Send Magic Link' : (isSignUp ? 'Sign Up' : 'Sign In')
+              )}
             </Button>
           </form>
           
-          <div className="mt-6 text-center text-sm">
-            <span className="text-muted-foreground">
-              {isSignUp ? "Already have an account? " : "Don't have an account? "}
-            </span>
-            <Button
-              variant="link"
-              className="p-0 h-auto font-semibold"
-              onClick={() => setIsSignUp(!isSignUp)}
-            >
-              {isSignUp ? "Log In" : "Sign Up"}
-            </Button>
+          <div className="mt-6 flex flex-col gap-2 text-center text-sm">
+            {!isSignUp && (
+              <Button
+                variant="link"
+                className="p-0 h-auto text-muted-foreground hover:text-foreground"
+                onClick={() => setUseMagicLink(!useMagicLink)}
+              >
+                {useMagicLink ? "Sign in with password instead" : "Sign in with magic link instead"}
+              </Button>
+            )}
+
+            <div>
+              <span className="text-muted-foreground">
+                {isSignUp ? "Already have an account? " : "Don't have an account? "}
+              </span>
+              <Button
+                variant="link"
+                className="p-0 h-auto font-semibold"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setUseMagicLink(false);
+                }}
+              >
+                {isSignUp ? "Log In" : "Sign Up"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
