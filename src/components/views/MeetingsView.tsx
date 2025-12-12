@@ -4,15 +4,18 @@ import { Button } from "@/components/ui/button";
 import { format, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Meeting } from '@/types/workspace';
 import { useAuth } from "@/components/providers/AuthProvider";
 import { toast } from "sonner";
+import { useState } from "react";
+import { CreateMeetingModal } from "@/components/modals/CreateMeetingModal";
 
 export function MeetingsView() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ['meetings'],
@@ -32,52 +35,6 @@ export function MeetingsView() {
         ...m,
         participants: m.attendees?.map((a: any) => a.user?.email || 'Unknown') || []
       })) as Meeting[];
-    }
-  });
-
-  const createMeeting = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error("Must be logged in");
-      
-      // 1. Create meeting
-      const { data: meeting, error: meetingError } = await supabase
-        .from('meetings')
-        .insert({
-          title: 'Nueva Reunión',
-          date: new Date().toISOString(),
-          notes: '',
-          created_by: user.id
-        })
-        .select()
-        .single();
-        
-      if (meetingError) throw meetingError;
-
-      // 2. Add creator as attendee
-      const { error: attendeeError } = await supabase
-        .from('meeting_attendees')
-        .insert({
-          meeting_id: meeting.id,
-          user_id: user.id
-        });
-
-      if (attendeeError) {
-        // If attendee creation fails, we might want to delete the meeting or just warn
-        console.error("Failed to add attendee", attendeeError);
-        // Don't throw here to avoid rolling back the meeting creation in UI if we want to keep it, 
-        // but strictly speaking we should probably throw.
-        // For now, let's throw so the user knows something went wrong.
-        throw attendeeError;
-      }
-
-      return meeting;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meetings'] });
-      toast.success("Reunión creada");
-    },
-    onError: (error) => {
-      toast.error("Error al crear reunión: " + error.message);
     }
   });
 
@@ -101,12 +58,17 @@ export function MeetingsView() {
             </div>
           </div>
           {user && (
-            <Button className="gap-2" onClick={() => createMeeting.mutate()} disabled={createMeeting.isPending}>
+            <Button className="gap-2" onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="w-4 h-4" />
-              {createMeeting.isPending ? "Creando..." : "Nueva Reunión"}
+              Nueva Reunión
             </Button>
           )}
         </div>
+
+        <CreateMeetingModal 
+          open={isCreateModalOpen} 
+          onOpenChange={setIsCreateModalOpen} 
+        />
 
         {/* Today's Meetings */}
         <section className="mb-8">
