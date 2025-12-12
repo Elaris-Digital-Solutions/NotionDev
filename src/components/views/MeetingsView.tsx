@@ -19,10 +19,19 @@ export function MeetingsView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('meetings')
-        .select('*')
+        .select(`
+          *,
+          attendees:meeting_attendees(
+            user:profiles(email)
+          )
+        `)
         .order('date', { ascending: true });
       if (error) throw error;
-      return data as Meeting[];
+      
+      return data.map((m: any) => ({
+        ...m,
+        participants: m.attendees?.map((a: any) => a.user?.email || 'Unknown') || []
+      })) as Meeting[];
     }
   });
 
@@ -30,21 +39,38 @@ export function MeetingsView() {
     mutationFn: async () => {
       if (!user) throw new Error("Must be logged in");
       
-      const newMeeting = {
-        title: 'Nueva Reunión',
-        date: new Date().toISOString(),
-        participants: [user.email], // Add creator as participant
-        notes: ''
-      };
-      
-      const { data, error } = await supabase
+      // 1. Create meeting
+      const { data: meeting, error: meetingError } = await supabase
         .from('meetings')
-        .insert(newMeeting)
+        .insert({
+          title: 'Nueva Reunión',
+          date: new Date().toISOString(),
+          notes: '',
+          created_by: user.id
+        })
         .select()
         .single();
         
-      if (error) throw error;
-      return data;
+      if (meetingError) throw meetingError;
+
+      // 2. Add creator as attendee
+      const { error: attendeeError } = await supabase
+        .from('meeting_attendees')
+        .insert({
+          meeting_id: meeting.id,
+          user_id: user.id
+        });
+
+      if (attendeeError) {
+        // If attendee creation fails, we might want to delete the meeting or just warn
+        console.error("Failed to add attendee", attendeeError);
+        // Don't throw here to avoid rolling back the meeting creation in UI if we want to keep it, 
+        // but strictly speaking we should probably throw.
+        // For now, let's throw so the user knows something went wrong.
+        throw attendeeError;
+      }
+
+      return meeting;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
