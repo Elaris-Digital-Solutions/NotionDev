@@ -114,7 +114,7 @@ export function InboxView() {
         </div>
 
         {/* Empty State */}
-        {mockNotifications.length === 0 && (
+        {notifications.length === 0 && (
           <div className="text-center py-16">
             <Bell className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">

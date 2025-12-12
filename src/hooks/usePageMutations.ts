@@ -85,10 +85,35 @@ export function usePageMutations(pageId: string) {
     },
   });
 
+  const createChildPage = useMutation({
+    mutationFn: async (title: string = 'Untitled') => {
+      const { data, error } = await supabase
+        .from('pages')
+        .insert([
+          { 
+            title, 
+            parent_id: pageId,
+            type: 'page',
+            icon: '📄'
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['database', pageId] });
+      queryClient.invalidateQueries({ queryKey: ['workspace'] });
+    },
+  });
+
   return {
     updatePage,
     updateBlock,
     createBlock,
     deleteBlock,
+    createChildPage,
   };
 }

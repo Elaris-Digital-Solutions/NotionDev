@@ -30,20 +30,22 @@ const views: { id: ViewType; label: string; icon: React.ComponentType<{ classNam
 ];
 
 import { useDatabase } from "@/hooks/useDatabase";
+import { usePageMutations } from "@/hooks/usePageMutations";
 
 export function DatabaseView({ title = "Database", icon = "🔍", pageId }: { title?: string; icon?: string; pageId: string }) {
   const [currentView, setCurrentView] = useState<ViewType>('table');
   const { rows, properties, isLoading } = useDatabase(pageId);
+  const { createChildPage } = usePageMutations(pageId);
 
   const renderView = () => {
     if (isLoading) return <div className="p-8">Loading database...</div>;
 
     switch (currentView) {
       case 'table': return <TableView rows={rows} properties={properties} />;
-      // case 'kanban': return <KanbanView />; // TODO: Update other views
-      // case 'list': return <ListView />;
-      // case 'gallery': return <GalleryView />;
-      // case 'calendar': return <CalendarView />;
+      case 'kanban': return <KanbanView rows={rows} properties={properties} />;
+      case 'list': return <ListView rows={rows} properties={properties} />;
+      case 'gallery': return <GalleryView rows={rows} properties={properties} />;
+      case 'calendar': return <CalendarView rows={rows} properties={properties} />;
       default: return <TableView rows={rows} properties={properties} />;
     }
   };
@@ -94,7 +96,7 @@ export function DatabaseView({ title = "Database", icon = "🔍", pageId }: { ti
             <Button variant="ghost" size="icon" className="w-7 h-7">
               <Settings className="w-4 h-4" />
             </Button>
-            <Button size="sm" className="gap-1 ml-2">
+            <Button size="sm" className="gap-1 ml-2" onClick={() => createChildPage.mutate('Untitled')}>
               <Plus className="w-4 h-4" />
               New
             </Button>

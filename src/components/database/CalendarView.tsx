@@ -1,11 +1,19 @@
-import { mockProjects } from "@/data/mockData";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DatabaseRow, DatabaseProperty } from "@/hooks/useDatabase";
+import { Link } from "react-router-dom";
 
-export function CalendarView() {
-  // Mock calendar grid
+interface CalendarViewProps {
+  rows: DatabaseRow[];
+  properties: DatabaseProperty[];
+}
+
+export function CalendarView({ rows, properties }: CalendarViewProps) {
+  // Mock calendar grid logic for now, but using real rows
+  // In a real implementation, we would need a date property to place items
   const days = Array.from({ length: 35 }, (_, i) => i + 1);
-  
+  const dateProp = properties.find(p => p.type === 'date') || properties.find(p => p.name.toLowerCase().includes('date'));
+
   return (
     <div className="flex-1 overflow-auto px-8 pb-8 flex flex-col">
         <div className="flex items-center justify-between mb-4">
@@ -34,7 +42,16 @@ export function CalendarView() {
             {days.map((day, i) => {
                 const date = i - 2; // Offset to start month correctly (mock)
                 const displayDate = date > 0 && date <= 31 ? date : '';
-                const projectsOnDay = mockProjects.filter(p => p.createdAt.getDate() === displayDate);
+                
+                // Filter rows that match this date
+                const rowsOnDay = rows.filter(row => {
+                    if (!displayDate) return false;
+                    // If we have a date property, use it. Otherwise use created_at
+                    const dateVal = dateProp ? row.properties[dateProp.name] : row.created_at;
+                    if (!dateVal) return false;
+                    const d = new Date(dateVal);
+                    return d.getDate() === displayDate && d.getMonth() === 11; // Dec (mock month)
+                });
 
                 return (
                     <div key={i} className="border-r border-b border-border p-1 min-h-[100px] relative group">
@@ -43,10 +60,12 @@ export function CalendarView() {
                         </span>
                         
                         <div className="mt-1 space-y-1">
-                            {projectsOnDay.map(project => (
-                                <div key={project.id} className="text-[10px] bg-accent/50 p-1 rounded truncate cursor-pointer hover:bg-accent">
-                                    {project.name}
-                                </div>
+                            {rowsOnDay.map(row => (
+                                <Link to={`/page/${row.id}`} key={row.id} className="block">
+                                    <div className="text-[10px] bg-accent/50 p-1 rounded truncate cursor-pointer hover:bg-accent">
+                                        {row.title}
+                                    </div>
+                                </Link>
                             ))}
                         </div>
                         
