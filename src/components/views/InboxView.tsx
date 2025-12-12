@@ -1,4 +1,4 @@
-import { Bell, MessageSquare, UserPlus, RefreshCw, Check } from "lucide-react";
+import { Bell, MessageSquare, UserPlus, RefreshCw, Check, Inbox } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Notification } from '@/types/workspace';
+import { useAuth } from "@/components/providers/AuthProvider";
+import { useNavigate } from "react-router-dom";
 
 const iconMap: Record<string, any> = {
   mention: MessageSquare,
@@ -17,26 +19,50 @@ const iconMap: Record<string, any> = {
 
 export function InboxView() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   
   const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', user?.id],
     queryFn: async () => {
+      if (!user) return [];
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as Notification[];
-    }
+    },
+    enabled: !!user
   });
 
-  const markAllRead = useMutation({
-    mutationFn: async () => {
-       const { error } = await supabase.from('notifications').update({ read: true }).neq('read', true);
+  const markAsRead = useMutation({
+    mutationFn: async (id: string) => {
+       const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);
        if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] })
   });
+
+  const markAllRead = useMutation({
+    mutationFn: async () => {
+       if (!user) return;
+       const { error } = await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).neq('read', true);
+       if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] })
+  });
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.read) {
+      markAsRead.mutate(notification.id);
+    }
+    // Assuming 'link' property contains the path, e.g., '/page/123'
+    if (notification.link) {
+      navigate(notification.link);
+    }
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -56,22 +82,33 @@ export function InboxView() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => markAllRead.mutate()}>
-            <Check className="w-4 h-4" />
-            Marcar todo como leído
-          </Button>
+          {unreadCount > 0 && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => markAllRead.mutate()}>
+              <Check className="w-4 h-4" />
+              Marcar todo como leído
+            </Button>
+          )}
         </div>
 
         {/* Notifications List */}
         <div className="space-y-3">
           {notifications.length === 0 && (
-            <div className="text-center text-muted-foreground py-8">No notifications</div>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <Inbox className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground">You’re all caught up</h3>
+              <p className="text-muted-foreground mt-1 max-w-xs">
+                No new notifications. When someone mentions you or assigns a task, it will appear here.
+              </p>
+            </div>
           )}
           {notifications.map((notification, index) => {
             const Icon = iconMap[notification.type] || MessageSquare;
             return (
               <Card 
                 key={notification.id}
+                onClick={() => handleNotificationClick(notification)}
                 className={cn(
                   "border-border hover:border-primary/30 transition-all cursor-pointer group",
                   !notification.read && "bg-accent/30 border-l-2 border-l-primary"

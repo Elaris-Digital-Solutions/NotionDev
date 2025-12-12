@@ -32,6 +32,46 @@ export interface Database {
           updated_at?: string | null
         }
       }
+      team_spaces: {
+        Row: {
+          id: string
+          name: string
+          icon: string | null
+          created_at: string
+          owner_id: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          icon?: string | null
+          created_at?: string
+          owner_id: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          icon?: string | null
+          created_at?: string
+          owner_id?: string
+        }
+      }
+      team_members: {
+        Row: {
+          team_id: string
+          user_id: string
+          role: 'owner' | 'editor' | 'viewer'
+        }
+        Insert: {
+          team_id: string
+          user_id: string
+          role?: 'owner' | 'editor' | 'viewer'
+        }
+        Update: {
+          team_id?: string
+          user_id?: string
+          role?: 'owner' | 'editor' | 'viewer'
+        }
+      }
       pages: {
         Row: {
           id: string
@@ -111,7 +151,153 @@ export interface Database {
           updated_at?: string
         }
       }
-      // Add other tables as needed...
+      databases: {
+        Row: {
+          id: string
+          page_id: string
+          description: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          page_id: string
+          description?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          page_id?: string
+          description?: string | null
+          created_at?: string
+        }
+      }
+      database_properties: {
+        Row: {
+          id: string
+          database_id: string
+          name: string
+          type: string
+          options: Json | null
+          order: number
+        }
+        Insert: {
+          id?: string
+          database_id: string
+          name: string
+          type: string
+          options?: Json | null
+          order: number
+        }
+        Update: {
+          id?: string
+          database_id?: string
+          name?: string
+          type?: string
+          options?: Json | null
+          order?: number
+        }
+      }
+      page_property_values: {
+        Row: {
+          id: string
+          page_id: string
+          property_id: string
+          value: Json | null
+        }
+        Insert: {
+          id?: string
+          page_id: string
+          property_id: string
+          value?: Json | null
+        }
+        Update: {
+          id?: string
+          page_id?: string
+          property_id?: string
+          value?: Json | null
+        }
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          title: string
+          message: string | null
+          link: string | null
+          read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          title: string
+          message?: string | null
+          link?: string | null
+          read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          title?: string
+          message?: string | null
+          link?: string | null
+          read?: boolean
+          created_at?: string
+        }
+      }
+      meetings: {
+        Row: {
+          id: string
+          title: string
+          date: string
+          notes: string | null
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          date: string
+          notes?: string | null
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          date?: string
+          notes?: string | null
+          created_by?: string
+          created_at?: string
+        }
+      }
+      meeting_attendees: {
+        Row: {
+          meeting_id: string
+          user_id: string
+        }
+        Insert: {
+          meeting_id: string
+          user_id: string
+        }
+        Update: {
+          meeting_id?: string
+          user_id?: string
+        }
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
     }
   }
 }

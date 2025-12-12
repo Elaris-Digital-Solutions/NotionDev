@@ -1,4 +1,4 @@
-import { BlockRenderer } from "@/components/blocks/BlockRenderer";
+import { BlockEditor } from "@/components/blocks/BlockEditor";
 import { DatabaseView } from "@/components/views/DatabaseView";
 import { Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ interface PageViewProps {
 
 export function PageView({ pageId }: PageViewProps) {
   const { page, blocks, isLoading } = usePage(pageId);
-  const { updatePage, updateBlock, deleteBlock, createBlock } = usePageMutations(pageId);
+  const { updatePage, updateBlock, deleteBlock, createBlock, moveBlock } = usePageMutations(pageId);
 
   if (isLoading) {
     return <div className="p-8">Loading page...</div>;
@@ -68,32 +68,21 @@ export function PageView({ pageId }: PageViewProps) {
         </div>
 
         {/* Blocks */}
-        <div className="space-y-1 pb-32">
-            {blocks.map((block) => (
-                <div key={block.id} className="group/block relative">
-                    <div className="absolute -left-8 top-1 opacity-0 group-hover/block:opacity-100 flex items-center gap-1">
-                        <div className="p-1 hover:bg-accent rounded cursor-pointer text-muted-foreground" onClick={() => createBlock.mutate({ type: 'text', content: '', order: (block.order || 0) + 1 })}>
-                            +
-                        </div>
-                        <div className="p-1 hover:bg-accent rounded cursor-grab text-muted-foreground">
-                            ⋮⋮
-                        </div>
-                    </div>
-                    <BlockRenderer 
-                        block={block} 
-                        onUpdate={(id, updates) => updateBlock.mutate({ blockId: id, updates })}
-                        onDelete={(id) => deleteBlock.mutate(id)}
-                    />
-                </div>
-            ))}
-            
-            {/* Empty state / Add block at end */}
-            <div 
-                className="h-8 -ml-2 pl-2 flex items-center text-muted-foreground/50 hover:text-muted-foreground cursor-text"
-                onClick={() => createBlock.mutate({ type: 'text', content: '', order: blocks.length })}
-            >
-                Click to add a block...
-            </div>
+        <div className="pb-32">
+          <BlockEditor 
+            blocks={blocks}
+            onAddBlock={(type, afterBlockId) => {
+              const afterBlock = blocks.find(b => b.id === afterBlockId);
+              createBlock.mutate({ 
+                type, 
+                content: '', 
+                order: afterBlock ? (afterBlock.order || 0) + 1 : 0 
+              });
+            }}
+            onUpdateBlock={(id, content) => updateBlock.mutate({ blockId: id, updates: { content } })}
+            onDeleteBlock={(id) => deleteBlock.mutate(id)}
+            onMoveBlock={(id, direction) => moveBlock.mutate({ blockId: id, direction })}
+          />
         </div>
       </div>
     </div>

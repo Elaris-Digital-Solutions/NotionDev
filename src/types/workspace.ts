@@ -23,6 +23,23 @@ export interface TeamSpace {
   name: string;
   icon?: string | null;
   pages: Page[];
+  members?: TeamSpaceMember[];
+}
+
+export interface TeamSpaceMember {
+  id: string;
+  team_space_id: string;
+  user_id: string;
+  role: 'owner' | 'editor' | 'viewer';
+  user?: { email: string }; // Joined user data
+}
+
+export interface PagePermission {
+  id: string;
+  page_id: string;
+  user_id: string;
+  role: 'full_access' | 'can_edit' | 'can_comment' | 'can_view';
+  user?: { email: string };
 }
 
 export interface Task {
@@ -76,4 +93,11 @@ export interface Block {
   order: number;
   parent_block_id: string | null;
   children?: Block[];
+}
+
+export interface DatabaseColumn {
+  id: string;
+  name: string;
+  type: 'text' | 'number' | 'select' | 'multi_select' | 'status' | 'date' | 'person' | 'files' | 'checkbox' | 'url' | 'email' | 'phone';
+  options?: any[];
 }

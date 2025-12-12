@@ -1,14 +1,18 @@
 import { StatusBadge, PriorityBadge } from "@/components/badges/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatabaseRow, DatabaseProperty } from "@/hooks/useDatabase";
+import { usePageMutations } from "@/hooks/usePageMutations";
 import { Link } from "react-router-dom";
 
 interface KanbanViewProps {
   rows: DatabaseRow[];
   properties: DatabaseProperty[];
+  pageId: string;
 }
 
-export function KanbanView({ rows, properties }: KanbanViewProps) {
+export function KanbanView({ rows, properties, pageId }: KanbanViewProps) {
+  const { createChildPage, setPageProperty } = usePageMutations(pageId);
+
   // Find the status property to group by
   const statusProp = properties.find(p => p.type === 'status') || properties.find(p => p.name.toLowerCase() === 'status');
   
@@ -28,6 +32,22 @@ export function KanbanView({ rows, properties }: KanbanViewProps) {
       // Handle both simple string values and object values depending on how we store them
       return val === colId || val?.id === colId;
     });
+  };
+
+  const handleCreateNew = async (statusId: string) => {
+    if (!statusProp) return;
+    
+    // 1. Create the page
+    const newPage = await createChildPage.mutateAsync('Untitled');
+    
+    // 2. Set the status property
+    if (newPage) {
+      await setPageProperty.mutateAsync({
+        pageId: newPage.id,
+        propertyId: statusProp.id,
+        value: statusId
+      });
+    }
   };
 
   if (!statusProp) {
@@ -74,7 +94,10 @@ export function KanbanView({ rows, properties }: KanbanViewProps) {
                     </Card>
                   </Link>
                 ))}
-                <div className="p-2 rounded hover:bg-accent/50 text-muted-foreground text-sm cursor-pointer flex items-center gap-2">
+                <div 
+                  onClick={() => handleCreateNew(col.id)}
+                  className="p-2 rounded hover:bg-accent/50 text-muted-foreground text-sm cursor-pointer flex items-center gap-2"
+                >
                     + New
                 </div>
               </div>

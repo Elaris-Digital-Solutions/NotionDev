@@ -4,11 +4,16 @@ import { Button } from "@/components/ui/button";
 import { format, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Meeting } from '@/types/workspace';
+import { useAuth } from "@/components/providers/AuthProvider";
+import { toast } from "sonner";
 
 export function MeetingsView() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ['meetings'],
     queryFn: async () => {
@@ -18,6 +23,35 @@ export function MeetingsView() {
         .order('date', { ascending: true });
       if (error) throw error;
       return data as Meeting[];
+    }
+  });
+
+  const createMeeting = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Must be logged in");
+      
+      const newMeeting = {
+        title: 'Nueva Reunión',
+        date: new Date().toISOString(),
+        participants: [user.email], // Add creator as participant
+        notes: ''
+      };
+      
+      const { data, error } = await supabase
+        .from('meetings')
+        .insert(newMeeting)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+      toast.success("Reunión creada");
+    },
+    onError: (error) => {
+      toast.error("Error al crear reunión: " + error.message);
     }
   });
 
@@ -40,10 +74,12 @@ export function MeetingsView() {
               </p>
             </div>
           </div>
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            Nueva Reunión
-          </Button>
+          {user && (
+            <Button className="gap-2" onClick={() => createMeeting.mutate()} disabled={createMeeting.isPending}>
+              <Plus className="w-4 h-4" />
+              {createMeeting.isPending ? "Creando..." : "Nueva Reunión"}
+            </Button>
+          )}
         </div>
 
         {/* Today's Meetings */}
@@ -72,9 +108,13 @@ export function MeetingsView() {
         <section>
           <h2 className="text-lg font-semibold text-foreground mb-4">Próximamente</h2>
           <div className="space-y-3">
-            {upcomingMeetings.map((meeting) => (
-              <MeetingCard key={meeting.id} meeting={meeting} />
-            ))}
+            {upcomingMeetings.length > 0 ? (
+              upcomingMeetings.map((meeting) => (
+                <MeetingCard key={meeting.id} meeting={meeting} />
+              ))
+            ) : (
+              <div className="text-muted-foreground text-sm">No hay reuniones próximas</div>
+            )}
           </div>
         </section>
       </div>

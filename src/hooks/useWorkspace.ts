@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { Page } from '@/types/workspace';
 
 export function useWorkspace() {
   const { user } = useAuth();
@@ -14,10 +15,11 @@ export function useWorkspace() {
         .select('*')
         .eq('owner_id', user.id)
         .is('team_space_id', null) // Private pages
+        .eq('in_trash', false)
         .order('created_at', { ascending: true });
       
       if (error) throw error;
-      return data;
+      return data as Page[];
     },
     enabled: !!user,
   });
@@ -47,7 +49,12 @@ export function useWorkspace() {
         .in('id', teamIds);
 
       if (teamsError) throw teamsError;
-      return teams;
+      
+      // Filter out trashed pages from team spaces
+      return teams.map(team => ({
+        ...team,
+        pages: team.pages.filter((p: any) => !p.in_trash)
+      }));
     },
     enabled: !!user,
   });
@@ -60,10 +67,28 @@ export function useWorkspace() {
         .from('pages')
         .select('*')
         .eq('is_favorite', true)
-        .eq('owner_id', user.id);
+        .eq('owner_id', user.id)
+        .eq('in_trash', false);
       
       if (error) throw error;
-      return data;
+      return data as Page[];
+    },
+    enabled: !!user,
+  });
+
+  const { data: trash, isLoading: trashLoading } = useQuery({
+    queryKey: ['trash', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('pages')
+        .select('*')
+        .eq('owner_id', user.id)
+        .eq('in_trash', true)
+        .order('updated_at', { ascending: false });
+        
+      if (error) throw error;
+      return data as Page[];
     },
     enabled: !!user,
   });
@@ -72,6 +97,7 @@ export function useWorkspace() {
     pages: pages || [],
     teamSpaces: teamSpaces || [],
     favorites: favorites || [],
-    isLoading: pagesLoading || teamsLoading || favoritesLoading,
+    trash: trash || [],
+    isLoading: pagesLoading || teamsLoading || favoritesLoading || trashLoading,
   };
 }

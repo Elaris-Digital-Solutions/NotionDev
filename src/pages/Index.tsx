@@ -6,51 +6,71 @@ import { InboxView } from "@/components/views/InboxView";
 import { MeetingsView } from "@/components/views/MeetingsView";
 import { PageView } from "@/components/views/PageView";
 import { supabase } from "@/lib/supabase";
+import { useParams, useNavigate } from "react-router-dom";
 
-const Index = () => {
-  const [currentPage, setCurrentPage] = useState('home');
+interface IndexProps {
+  view?: 'home' | 'inbox' | 'meetings' | 'page';
+}
+
+const Index = ({ view = 'home' }: IndexProps) => {
+  const { pageId } = useParams();
+  const navigate = useNavigate();
   const [pageTitle, setPageTitle] = useState('');
 
+  const currentPage = view === 'page' && pageId ? pageId : view;
+
   useEffect(() => {
-    if (!['home', 'inbox', 'meetings'].includes(currentPage)) {
-      supabase.from('pages').select('title').eq('id', currentPage).single()
+    if (view === 'page' && pageId) {
+      supabase.from('pages').select('title').eq('id', pageId).single()
         .then(({ data }) => {
           if (data) setPageTitle(data.title);
         });
     }
-  }, [currentPage]);
+  }, [view, pageId]);
+
+  const handlePageChange = (page: string) => {
+    if (['home', 'inbox', 'meetings'].includes(page)) {
+      navigate(page === 'home' ? '/' : `/${page}`);
+    } else {
+      navigate(`/page/${page}`);
+    }
+  };
 
   const getBreadcrumb = () => {
-    switch (currentPage) {
+    switch (view) {
       case 'home':
         return ['Home'];
       case 'inbox':
         return ['Inbox'];
       case 'meetings':
         return ['Meetings'];
-      default:
+      case 'page':
         return ['ELARIS D.S.', pageTitle || 'Loading...'];
+      default:
+        return ['Home'];
     }
   };
 
   const renderView = () => {
-    switch (currentPage) {
+    switch (view) {
       case 'home':
         return <HomeView />;
       case 'inbox':
         return <InboxView />;
       case 'meetings':
         return <MeetingsView />;
+      case 'page':
+        return pageId ? <PageView pageId={pageId} /> : <HomeView />;
       default:
-        return <PageView pageId={currentPage} />;
+        return <HomeView />;
     }
   };
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
-      <AppSidebar currentPage={currentPage} onPageChange={setCurrentPage} />
+      <AppSidebar currentPage={currentPage} onPageChange={handlePageChange} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Topbar breadcrumb={getBreadcrumb()} />
+        <Topbar breadcrumb={getBreadcrumb()} pageId={pageId} />
         <main className="flex-1 overflow-hidden flex flex-col">
           {renderView()}
         </main>

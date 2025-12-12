@@ -2,14 +2,18 @@ import { StatusBadge, PriorityBadge } from "@/components/badges/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { DatabaseRow, DatabaseProperty } from "@/hooks/useDatabase";
+import { usePageMutations } from "@/hooks/usePageMutations";
 import { Link } from "react-router-dom";
 
 interface GalleryViewProps {
   rows: DatabaseRow[];
   properties: DatabaseProperty[];
+  pageId: string;
 }
 
-export function GalleryView({ rows, properties }: GalleryViewProps) {
+export function GalleryView({ rows, properties, pageId }: GalleryViewProps) {
+  const { createChildPage } = usePageMutations(pageId);
+
   return (
     <div className="flex-1 overflow-auto px-8 pb-8">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -43,7 +47,10 @@ export function GalleryView({ rows, properties }: GalleryViewProps) {
             </Card>
           </Link>
         ))}
-        <button className="h-[300px] border border-dashed border-border rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors">
+        <button 
+          onClick={() => createChildPage.mutate('Untitled')}
+          className="h-[300px] border border-dashed border-border rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors"
+        >
             + New
         </button>
       </div>

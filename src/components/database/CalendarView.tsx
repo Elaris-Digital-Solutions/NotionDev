@@ -1,18 +1,40 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatabaseRow, DatabaseProperty } from "@/hooks/useDatabase";
+import { usePageMutations } from "@/hooks/usePageMutations";
 import { Link } from "react-router-dom";
 
 interface CalendarViewProps {
   rows: DatabaseRow[];
   properties: DatabaseProperty[];
+  pageId: string;
 }
 
-export function CalendarView({ rows, properties }: CalendarViewProps) {
+export function CalendarView({ rows, properties, pageId }: CalendarViewProps) {
+  const { createChildPage, setPageProperty } = usePageMutations(pageId);
+
   // Mock calendar grid logic for now, but using real rows
   // In a real implementation, we would need a date property to place items
   const days = Array.from({ length: 35 }, (_, i) => i + 1);
   const dateProp = properties.find(p => p.type === 'date') || properties.find(p => p.name.toLowerCase().includes('date'));
+
+  const handleCreateOnDate = async (day: number) => {
+    // Calculate date string (mock logic for now: Dec 2025)
+    const date = day - 2;
+    if (date <= 0 || date > 31) return;
+    
+    const dateStr = `2025-12-${date.toString().padStart(2, '0')}`;
+    
+    const newPage = await createChildPage.mutateAsync('Untitled');
+    
+    if (newPage && dateProp) {
+      await setPageProperty.mutateAsync({
+        pageId: newPage.id,
+        propertyId: dateProp.id,
+        value: dateStr
+      });
+    }
+  };
 
   return (
     <div className="flex-1 overflow-auto px-8 pb-8 flex flex-col">
@@ -69,7 +91,10 @@ export function CalendarView({ rows, properties }: CalendarViewProps) {
                             ))}
                         </div>
                         
-                        <button className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground">
+                        <button 
+                            onClick={() => handleCreateOnDate(i)}
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+                        >
                             +
                         </button>
                     </div>

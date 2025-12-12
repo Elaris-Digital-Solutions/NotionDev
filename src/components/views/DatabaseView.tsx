@@ -31,23 +31,39 @@ const views: { id: ViewType; label: string; icon: React.ComponentType<{ classNam
 
 import { useDatabase } from "@/hooks/useDatabase";
 import { usePageMutations } from "@/hooks/usePageMutations";
+import { DatabaseProperties } from "@/components/database/DatabaseProperties";
+import { useDatabaseMutations } from "@/hooks/useDatabaseMutations";
 
 export function DatabaseView({ title = "Database", icon = "🔍", pageId }: { title?: string; icon?: string; pageId: string }) {
   const [currentView, setCurrentView] = useState<ViewType>('table');
-  const { rows, properties, isLoading } = useDatabase(pageId);
+  const { rows, properties, database, isLoading } = useDatabase(pageId);
   const { createChildPage } = usePageMutations(pageId);
+  const { addProperty, updateProperty, deleteProperty } = useDatabaseMutations(database?.id);
 
   const renderView = () => {
     if (isLoading) return <div className="p-8">Loading database...</div>;
+    if (!database) return <div className="p-8">Database not found</div>;
 
-    switch (currentView) {
-      case 'table': return <TableView rows={rows} properties={properties} />;
-      case 'kanban': return <KanbanView rows={rows} properties={properties} />;
-      case 'list': return <ListView rows={rows} properties={properties} />;
-      case 'gallery': return <GalleryView rows={rows} properties={properties} />;
-      case 'calendar': return <CalendarView rows={rows} properties={properties} />;
-      default: return <TableView rows={rows} properties={properties} />;
-    }
+    return (
+      <div className="space-y-4">
+        <DatabaseProperties 
+          columns={properties} 
+          onAddColumn={(col) => addProperty.mutate(col)}
+          onUpdateColumn={(id, updates) => updateProperty.mutate({ id, updates })}
+          onDeleteColumn={(id) => deleteProperty.mutate(id)}
+        />
+        {(() => {
+          switch (currentView) {
+            case 'table': return <TableView rows={rows} properties={properties} pageId={pageId} databaseId={database.id} />;
+            case 'kanban': return <KanbanView rows={rows} properties={properties} pageId={pageId} />;
+            case 'list': return <ListView rows={rows} properties={properties} pageId={pageId} />;
+            case 'gallery': return <GalleryView rows={rows} properties={properties} pageId={pageId} />;
+            case 'calendar': return <CalendarView rows={rows} properties={properties} pageId={pageId} />;
+            default: return <TableView rows={rows} properties={properties} pageId={pageId} databaseId={database.id} />;
+          }
+        })()}
+      </div>
+    );
   };
 
   return (

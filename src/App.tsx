@@ -33,6 +33,21 @@ const App = () => (
                 <Index />
               </ProtectedRoute>
             } />
+            <Route path="/inbox" element={
+              <ProtectedRoute>
+                <Index view="inbox" />
+              </ProtectedRoute>
+            } />
+            <Route path="/meetings" element={
+              <ProtectedRoute>
+                <Index view="meetings" />
+              </ProtectedRoute>
+            } />
+            <Route path="/page/:pageId" element={
+              <ProtectedRoute>
+                <Index view="page" />
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

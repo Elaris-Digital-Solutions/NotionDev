@@ -7,39 +7,87 @@ import {
   FileText,
   Users,
   Zap,
+  Layout,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, PriorityBadge } from "@/components/badges/StatusBadge";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { format } from "date-fns";
+import { format, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Page, Meeting } from '@/types/workspace';
 import { Link } from "react-router-dom";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export function HomeView() {
   const today = new Date();
+  const { user } = useAuth();
   
   const { data: recentPages = [] } = useQuery({
-    queryKey: ['recentPages'],
+    queryKey: ['recentPages', user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from('pages').select('*').order('updated_at', { ascending: false }).limit(4);
+      if (!user) return [];
+      const { data } = await supabase
+        .from('pages')
+        .select('*')
+        .eq('owner_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(4);
       return data as Page[];
-    }
+    },
+    enabled: !!user
   });
 
   const { data: upcomingMeetings = [] } = useQuery({
-    queryKey: ['upcomingMeetings'],
+    queryKey: ['upcomingMeetings', user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from('meetings').select('*').gte('date', new Date().toISOString()).order('date').limit(2);
+      if (!user) return [];
+      const { data } = await supabase
+        .from('meetings')
+        .select('*')
+        .gte('date', new Date().toISOString())
+        .order('date')
+        .limit(5);
       return data as Meeting[];
-    }
+    },
+    enabled: !!user
   });
 
-  // Placeholder for tasks since we don't have a dedicated tasks table yet
-  const upcomingTasks: any[] = [];
+  const { data: favorites = [] } = useQuery({
+    queryKey: ['favorites', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from('pages')
+        .select('*')
+        .eq('owner_id', user.id)
+        .eq('is_favorite', true);
+      return data as Page[];
+    },
+    enabled: !!user
+  });
+
+  const { data: recentTasks = [] } = useQuery({
+    queryKey: ['recentTasks', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      // Fetch pages that are part of a database (rows)
+      const { data } = await supabase
+        .from('pages')
+        .select('*')
+        .eq('owner_id', user.id)
+        .not('parent_database_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      return data as Page[];
+    },
+    enabled: !!user
+  });
+
+  const meetingsToday = upcomingMeetings.filter(m => isToday(new Date(m.date))).length;
+  const totalTasks = recentTasks.length; // This is just the recent ones, ideally we'd count all
 
   return (
     <div className="flex-1 overflow-auto p-8 animate-fade-up">
@@ -56,60 +104,67 @@ export function HomeView() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
-          icon={CheckCircle2}
-          label="Tareas Pendientes"
-          value="0"
+          icon={Layout}
+          label="Ítems Recientes"
+          value={totalTasks.toString()}
           color="text-primary"
         />
         <StatCard
-          icon={Clock}
-          label="En Progreso"
-          value="0"
+          icon={Star}
+          label="Favoritos"
+          value={favorites.length.toString()}
           color="text-info"
         />
         <StatCard
           icon={Calendar}
           label="Reuniones Hoy"
-          value="2"
+          value={meetingsToday.toString()}
           color="text-success"
         />
         <StatCard
-          icon={Zap}
-          label="Completadas"
-          value="12"
+          icon={Clock}
+          label="Páginas Recientes"
+          value={recentPages.length.toString()}
           color="text-warning"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* My Tasks */}
+        {/* My Tasks (Recent Database Items) */}
         <Card className="lg:col-span-2 bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-primary" />
-              Mis Tareas
+              Ítems Recientes
             </CardTitle>
             <Button variant="ghost" size="sm" className="text-muted-foreground">
-              Ver todas
+              Ver todos
               <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
-            {upcomingTasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate">{task.title}</p>
-                  {task.assignee && (
-                    <p className="text-sm text-muted-foreground">Asignado a {task.assignee}</p>
-                  )}
-                </div>
-                <StatusBadge status={task.status} />
-                <PriorityBadge priority={task.priority} />
-              </div>
-            ))}
+            {recentTasks.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No hay ítems recientes</div>
+            ) : (
+                recentTasks.map((task) => (
+                <Link
+                    to={`/page/${task.id}`}
+                    key={task.id}
+                    className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+                >
+                    <div className="flex-1 min-w-0 flex items-center gap-3">
+                        <span className="text-lg">{task.icon || '📄'}</span>
+                        <div>
+                            <p className="font-medium text-foreground truncate">{task.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                                Creado el {format(new Date(task.created_at), "d MMM", { locale: es })}
+                            </p>
+                        </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+                ))
+            )}
           </CardContent>
         </Card>
 
@@ -122,23 +177,27 @@ export function HomeView() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {upcomingMeetings.map((meeting) => (
-              <div
-                key={meeting.id}
-                className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
-              >
-                <p className="font-medium text-foreground">{meeting.title}</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {format(new Date(meeting.date), "d MMM, HH:mm", { locale: es })}
-                </p>
-                <div className="flex items-center gap-1 mt-2">
-                  <Users className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">
-                    {(meeting.participants || []).length} participantes
-                  </span>
+            {upcomingMeetings.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No hay reuniones programadas</div>
+            ) : (
+                upcomingMeetings.map((meeting) => (
+                <div
+                    key={meeting.id}
+                    className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
+                >
+                    <p className="font-medium text-foreground">{meeting.title}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                    {format(new Date(meeting.date), "d MMM, HH:mm", { locale: es })}
+                    </p>
+                    <div className="flex items-center gap-1 mt-2">
+                    <Users className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                        {(meeting.participants || []).length} participantes
+                    </span>
+                    </div>
                 </div>
-              </div>
-            ))}
+                ))
+            )}
           </CardContent>
         </Card>
       </div>
@@ -170,14 +229,20 @@ export function HomeView() {
           Favoritos
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <button className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:border-primary/50 hover:bg-accent/30 transition-all text-left">
-            <span className="text-2xl">🔍</span>
-            <span className="font-medium text-foreground truncate">Clientes Potenciales</span>
-          </button>
-          <button className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:border-primary/50 hover:bg-accent/30 transition-all text-left">
-            <span className="text-2xl">🎯</span>
-            <span className="font-medium text-foreground truncate">Backlog del servicio</span>
-          </button>
+          {favorites.length === 0 ? (
+              <div className="col-span-4 text-muted-foreground text-sm italic">No tienes favoritos aún</div>
+          ) : (
+            favorites.map((page) => (
+                <Link
+                to={`/page/${page.id}`}
+                key={page.id}
+                className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:border-primary/50 hover:bg-accent/30 transition-all text-left"
+                >
+                <span className="text-2xl">{page.icon || '📄'}</span>
+                <span className="font-medium text-foreground truncate">{page.title}</span>
+                </Link>
+            ))
+          )}
         </div>
       </div>
     </div>

@@ -1,7 +1,9 @@
-import { Search, Plus, Bell, ChevronLeft, ChevronRight, Star, MoreHorizontal, Home, Calendar, Inbox } from "lucide-react";
+import { useState } from "react";
+import { Search, Plus, Bell, ChevronLeft, ChevronRight, Star, MoreHorizontal, Home, Calendar, Inbox, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SharePageModal } from "@/components/modals/SharePageModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,9 +13,12 @@ import {
 
 interface TopbarProps {
   breadcrumb?: string[];
+  pageId?: string;
 }
 
-export function Topbar({ breadcrumb = ['ELARIS D.S.', 'Clientes Potenciales'] }: TopbarProps) {
+export function Topbar({ breadcrumb = ['ELARIS D.S.', 'Clientes Potenciales'], pageId }: TopbarProps) {
+  const [shareOpen, setShareOpen] = useState(false);
+
   return (
     <header className="h-12 border-b border-border bg-background flex items-center justify-between px-3 gap-4">
       {/* Left Section: Navigation & Breadcrumbs */}
@@ -56,6 +61,22 @@ export function Topbar({ breadcrumb = ['ELARIS D.S.', 'Clientes Potenciales'] }:
 
       {/* Right Section: Actions */}
       <div className="flex items-center gap-1">
+        {pageId && (
+          <>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
+              onClick={() => setShareOpen(true)}
+            >
+              <Share className="w-3 h-3" />
+              <span className="text-xs">Share</span>
+            </Button>
+            <div className="h-4 w-[1px] bg-border mx-1" />
+            <SharePageModal pageId={pageId} open={shareOpen} onOpenChange={setShareOpen} />
+          </>
+        )}
+
         <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground">
           <Home className="w-4 h-4" />
         </Button>

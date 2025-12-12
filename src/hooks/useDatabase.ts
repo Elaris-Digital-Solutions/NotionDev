@@ -34,6 +34,7 @@ export function useDatabase(pageId: string) {
   const { data: properties } = useQuery({
     queryKey: ['database_properties', database?.id],
     queryFn: async () => {
+      if (!database?.id) return [];
       const { data, error } = await supabase
         .from('database_properties')
         .select('*')
@@ -50,6 +51,7 @@ export function useDatabase(pageId: string) {
   const { data: rows, isLoading } = useQuery({
     queryKey: ['database_rows', database?.id],
     queryFn: async () => {
+      if (!database?.id) return [];
       const { data: pages, error } = await supabase
         .from('pages')
         .select('*')

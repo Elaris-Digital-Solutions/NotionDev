@@ -6,9 +6,10 @@ import { Link } from "react-router-dom";
 interface ListViewProps {
   rows: DatabaseRow[];
   properties: DatabaseProperty[];
+  pageId: string;
 }
 
-export function ListView({ rows, properties }: ListViewProps) {
+export function ListView({ rows, properties, pageId }: ListViewProps) {
   return (
     <div className="flex-1 overflow-auto px-8 pb-8 max-w-3xl mx-auto">
       <div className="space-y-1">
