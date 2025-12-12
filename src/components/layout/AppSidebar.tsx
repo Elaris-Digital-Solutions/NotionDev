@@ -39,6 +39,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 interface SidebarProps {
   currentPage: string;
@@ -46,6 +49,7 @@ interface SidebarProps {
 }
 
 export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
+  const { user } = useAuth();
   const [favoritesOpen, setFavoritesOpen] = useState(true);
   const [teamspacesOpen, setTeamspacesOpen] = useState(true);
   const [privateOpen, setPrivateOpen] = useState(true);
@@ -58,6 +62,21 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
 
   const { pages, teamSpaces, favorites, trash, isLoading } = useWorkspace();
   const { createTeamSpace, createPage, restorePage, permanentlyDeletePage } = useWorkspaceMutations();
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['notifications', 'unread', user?.id],
+    queryFn: async () => {
+      if (!user) return 0;
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!user
+  });
 
   const handleCreateTeamSpace = async () => {
     if (!newTeamSpaceName.trim()) return;
@@ -108,14 +127,13 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
             <NavItem 
               icon={Calendar} 
               label="Meetings" 
-              badge="New"
               onClick={() => onPageChange('meetings')} 
               active={currentPage === 'meetings'}
             />
             <NavItem 
               icon={Inbox} 
               label="Inbox" 
-              count={6}
+              count={unreadCount > 0 ? unreadCount : undefined}
               onClick={() => onPageChange('inbox')} 
               active={currentPage === 'inbox'}
             />
