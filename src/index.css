@@ -1,0 +1,155 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 14% 10%;
+    --foreground: 220 10% 92%;
+
+    --card: 220 14% 12%;
+    --card-foreground: 220 10% 92%;
+
+    --popover: 220 14% 14%;
+    --popover-foreground: 220 10% 92%;
+
+    --primary: 38 92% 50%;
+    --primary-foreground: 220 14% 10%;
+
+    --secondary: 220 14% 18%;
+    --secondary-foreground: 220 10% 75%;
+
+    --muted: 220 14% 16%;
+    --muted-foreground: 220 10% 55%;
+
+    --accent: 220 14% 20%;
+    --accent-foreground: 220 10% 92%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 220 10% 92%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 220 14% 10%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 220 14% 10%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 220 14% 10%;
+
+    --border: 220 14% 20%;
+    --input: 220 14% 18%;
+    --ring: 38 92% 50%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 220 14% 8%;
+    --sidebar-foreground: 220 10% 75%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 220 14% 10%;
+    --sidebar-accent: 220 14% 14%;
+    --sidebar-accent-foreground: 220 10% 92%;
+    --sidebar-border: 220 14% 16%;
+    --sidebar-ring: 38 92% 50%;
+
+    /* Status colors */
+    --status-not-started: 220 14% 35%;
+    --status-in-progress: 199 89% 48%;
+    --status-completed: 142 71% 45%;
+    --status-blocked: 0 72% 51%;
+
+    /* Priority colors */
+    --priority-high: 0 72% 51%;
+    --priority-medium: 38 92% 50%;
+    --priority-low: 142 71% 45%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(28 92% 45%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(220 14% 14%) 0%, hsl(220 14% 11%) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(220 14% 5% / 0.5);
+    --shadow-md: 0 4px 6px -1px hsl(220 14% 5% / 0.5);
+    --shadow-lg: 0 10px 15px -3px hsl(220 14% 5% / 0.5);
+
+    /* Animations */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 220 14% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 14% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 14% 10%;
+    --primary: 38 92% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 220 14% 30%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 10% 45%;
+    --accent: 220 14% 94%;
+    --accent-foreground: 220 14% 10%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 88%;
+    --input: 220 14% 88%;
+    --ring: 38 92% 50%;
+    --sidebar-background: 220 14% 96%;
+    --sidebar-foreground: 220 14% 30%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 92%;
+    --sidebar-accent-foreground: 220 14% 10%;
+    --sidebar-border: 220 14% 88%;
+    --sidebar-ring: 38 92% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50;
+  }
+
+  .hover-lift {
+    @apply transition-transform duration-200 hover:-translate-y-0.5;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
