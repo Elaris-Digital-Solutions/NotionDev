@@ -1,0 +1,77 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/providers/AuthProvider';
+
+export function useWorkspace() {
+  const { user } = useAuth();
+
+  const { data: pages, isLoading: pagesLoading } = useQuery({
+    queryKey: ['pages', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('pages')
+        .select('*')
+        .eq('owner_id', user.id)
+        .is('team_space_id', null) // Private pages
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: teamSpaces, isLoading: teamsLoading } = useQuery({
+    queryKey: ['teamSpaces', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      // Fetch teams where user is a member
+      const { data: members, error: memberError } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', user.id);
+      
+      if (memberError) throw memberError;
+      
+      const teamIds = members.map(m => m.team_id);
+      
+      if (teamIds.length === 0) return [];
+
+      const { data: teams, error: teamsError } = await supabase
+        .from('team_spaces')
+        .select(`
+          *,
+          pages (*)
+        `)
+        .in('id', teamIds);
+
+      if (teamsError) throw teamsError;
+      return teams;
+    },
+    enabled: !!user,
+  });
+
+  const { data: favorites, isLoading: favoritesLoading } = useQuery({
+    queryKey: ['favorites', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('pages')
+        .select('*')
+        .eq('is_favorite', true)
+        .eq('owner_id', user.id);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  return {
+    pages: pages || [],
+    teamSpaces: teamSpaces || [],
+    favorites: favorites || [],
+    isLoading: pagesLoading || teamsLoading || favoritesLoading,
+  };
+}

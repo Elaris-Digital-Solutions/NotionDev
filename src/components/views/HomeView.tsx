@@ -10,17 +10,36 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { mockTasks, mockMeetings, mockPages } from "@/data/mockData";
 import { StatusBadge, PriorityBadge } from "@/components/badges/StatusBadge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { Page, Meeting } from '@/types/workspace';
+import { Link } from "react-router-dom";
 
 export function HomeView() {
   const today = new Date();
-  const upcomingTasks = mockTasks.filter(t => t.status !== 'completed').slice(0, 3);
-  const upcomingMeetings = mockMeetings.slice(0, 2);
-  const recentPages = mockPages.slice(0, 4);
+  
+  const { data: recentPages = [] } = useQuery({
+    queryKey: ['recentPages'],
+    queryFn: async () => {
+      const { data } = await supabase.from('pages').select('*').order('updated_at', { ascending: false }).limit(4);
+      return data as Page[];
+    }
+  });
+
+  const { data: upcomingMeetings = [] } = useQuery({
+    queryKey: ['upcomingMeetings'],
+    queryFn: async () => {
+      const { data } = await supabase.from('meetings').select('*').gte('date', new Date().toISOString()).order('date').limit(2);
+      return data as Meeting[];
+    }
+  });
+
+  // Placeholder for tasks since we don't have a dedicated tasks table yet
+  const upcomingTasks: any[] = [];
 
   return (
     <div className="flex-1 overflow-auto p-8 animate-fade-up">
@@ -39,13 +58,13 @@ export function HomeView() {
         <StatCard
           icon={CheckCircle2}
           label="Tareas Pendientes"
-          value="5"
+          value="0"
           color="text-primary"
         />
         <StatCard
           icon={Clock}
           label="En Progreso"
-          value="3"
+          value="0"
           color="text-info"
         />
         <StatCard
@@ -110,12 +129,12 @@ export function HomeView() {
               >
                 <p className="font-medium text-foreground">{meeting.title}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {format(meeting.date, "d MMM, HH:mm", { locale: es })}
+                  {format(new Date(meeting.date), "d MMM, HH:mm", { locale: es })}
                 </p>
                 <div className="flex items-center gap-1 mt-2">
                   <Users className="w-3 h-3 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">
-                    {meeting.attendees.length} participantes
+                    {(meeting.participants || []).length} participantes
                   </span>
                 </div>
               </div>
@@ -132,13 +151,14 @@ export function HomeView() {
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {recentPages.map((page) => (
-            <button
+            <Link
+              to={`/page/${page.id}`}
               key={page.id}
               className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:border-primary/50 hover:bg-accent/30 transition-all text-left group"
             >
-              <span className="text-2xl">{page.icon}</span>
+              <span className="text-2xl">{page.icon || '📄'}</span>
               <span className="font-medium text-foreground truncate">{page.title}</span>
-            </button>
+            </Link>
           ))}
         </div>
       </div>

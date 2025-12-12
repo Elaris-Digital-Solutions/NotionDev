@@ -1,14 +1,30 @@
 import { Calendar, Clock, Users, Plus, Video, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { mockMeetings } from "@/data/mockData";
 import { format, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { Meeting } from '@/types/workspace';
 
 export function MeetingsView() {
-  const todayMeetings = mockMeetings.filter(m => isToday(m.date));
-  const upcomingMeetings = mockMeetings.filter(m => !isToday(m.date));
+  const { data: meetings = [], isLoading } = useQuery({
+    queryKey: ['meetings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('*')
+        .order('date', { ascending: true });
+      if (error) throw error;
+      return data as Meeting[];
+    }
+  });
+
+  const todayMeetings = meetings.filter(m => isToday(new Date(m.date)));
+  const upcomingMeetings = meetings.filter(m => !isToday(new Date(m.date)) && new Date(m.date) > new Date());
+
+  if (isLoading) return <div className="p-8">Loading meetings...</div>;
 
   return (
     <div className="flex-1 overflow-auto p-8 animate-fade-up">
@@ -67,11 +83,14 @@ export function MeetingsView() {
 }
 
 interface MeetingCardProps {
-  meeting: typeof mockMeetings[0];
+  meeting: Meeting;
   isToday?: boolean;
 }
 
 function MeetingCard({ meeting, isToday: isTodayMeeting }: MeetingCardProps) {
+  const date = new Date(meeting.date);
+  const participants = meeting.participants || [];
+
   return (
     <Card className="border-border hover:border-info/30 transition-all cursor-pointer group">
       <CardContent className="p-4">
@@ -80,10 +99,10 @@ function MeetingCard({ meeting, isToday: isTodayMeeting }: MeetingCardProps) {
             {/* Time Block */}
             <div className={`p-3 rounded-lg text-center min-w-[70px] ${isTodayMeeting ? 'bg-info/20' : 'bg-secondary'}`}>
               <p className={`text-lg font-bold ${isTodayMeeting ? 'text-info' : 'text-foreground'}`}>
-                {format(meeting.date, 'HH:mm')}
+                {format(date, 'HH:mm')}
               </p>
               <p className="text-xs text-muted-foreground">
-                {isTodayMeeting ? 'Hoy' : format(meeting.date, 'd MMM', { locale: es })}
+                {isTodayMeeting ? 'Hoy' : format(date, 'd MMM', { locale: es })}
               </p>
             </div>
 
@@ -97,7 +116,7 @@ function MeetingCard({ meeting, isToday: isTodayMeeting }: MeetingCardProps) {
               <div className="flex items-center gap-2 mt-2">
                 <Users className="w-4 h-4 text-muted-foreground" />
                 <div className="flex -space-x-2">
-                  {meeting.attendees.slice(0, 3).map((attendee, i) => (
+                  {participants.slice(0, 3).map((attendee, i) => (
                     <Avatar key={i} className="w-6 h-6 border-2 border-card">
                       <AvatarFallback className="text-[10px] bg-accent">
                         {attendee.split(' ').map(n => n[0]).join('')}
@@ -106,7 +125,7 @@ function MeetingCard({ meeting, isToday: isTodayMeeting }: MeetingCardProps) {
                   ))}
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {meeting.attendees.length} participantes
+                  {participants.length} participantes
                 </span>
               </div>
 

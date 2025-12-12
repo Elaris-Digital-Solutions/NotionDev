@@ -11,42 +11,50 @@ import {
   Search,
   Settings,
   Plus,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { StatusBadge, PriorityBadge } from "@/components/badges/StatusBadge";
-import { ProgressBar } from "@/components/ui/progress-bar";
-import { mockProjects } from "@/data/mockData";
 import { ViewType } from "@/types/workspace";
 import { cn } from "@/lib/utils";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { TableView } from "@/components/database/TableView";
+import { KanbanView } from "@/components/database/KanbanView";
+import { ListView } from "@/components/database/ListView";
+import { GalleryView } from "@/components/database/GalleryView";
+import { CalendarView } from "@/components/database/CalendarView";
 
 const views: { id: ViewType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: 'table', label: 'Todos los proyectos', icon: Star },
-  { id: 'kanban', label: 'Por Estado', icon: Kanban },
-  { id: 'list', label: 'Contacto', icon: List },
-  { id: 'gallery', label: 'Progreso', icon: LayoutGrid },
-  { id: 'calendar', label: 'Gantt', icon: GanttChart },
+  { id: 'table', label: 'Table', icon: Star },
+  { id: 'kanban', label: 'Board', icon: Kanban },
+  { id: 'list', label: 'List', icon: List },
+  { id: 'gallery', label: 'Gallery', icon: LayoutGrid },
+  { id: 'calendar', label: 'Calendar', icon: Calendar },
 ];
 
-export function DatabaseView() {
+import { useDatabase } from "@/hooks/useDatabase";
+
+export function DatabaseView({ title = "Database", icon = "🔍", pageId }: { title?: string; icon?: string; pageId: string }) {
   const [currentView, setCurrentView] = useState<ViewType>('table');
+  const { rows, properties, isLoading } = useDatabase(pageId);
+
+  const renderView = () => {
+    if (isLoading) return <div className="p-8">Loading database...</div>;
+
+    switch (currentView) {
+      case 'table': return <TableView rows={rows} properties={properties} />;
+      // case 'kanban': return <KanbanView />; // TODO: Update other views
+      // case 'list': return <ListView />;
+      // case 'gallery': return <GalleryView />;
+      // case 'calendar': return <CalendarView />;
+      default: return <TableView rows={rows} properties={properties} />;
+    }
+  };
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col animate-fade-up">
       {/* Page Header */}
       <div className="p-8 pb-4">
         <div className="flex items-center gap-3 mb-6">
-          <span className="text-4xl">🔍</span>
-          <h1 className="text-4xl font-bold text-foreground">Clientes Potenciales</h1>
+          <span className="text-4xl">{icon}</span>
+          <h1 className="text-4xl font-bold text-foreground">{title}</h1>
         </div>
 
         {/* View Tabs */}
@@ -94,79 +102,8 @@ export function DatabaseView() {
         </div>
       </div>
 
-      {/* Table View */}
-      <div className="flex-1 overflow-auto px-8 pb-8">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground font-medium">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs">Aa</span>
-                  Nombre del proyecto
-                </div>
-              </TableHead>
-              <TableHead className="text-muted-foreground font-medium">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs">≡</span>
-                  Descripción
-                </div>
-              </TableHead>
-              <TableHead className="text-muted-foreground font-medium">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs">⚠</span>
-                  Problema
-                </div>
-              </TableHead>
-              <TableHead className="text-muted-foreground font-medium">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs">◎</span>
-                  Estado
-                </div>
-              </TableHead>
-              <TableHead className="text-muted-foreground font-medium">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs">📊</span>
-                  Progreso
-                </div>
-              </TableHead>
-              <TableHead className="text-muted-foreground font-medium">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs">⊙</span>
-                  Prioridad
-                </div>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {mockProjects.map((project, index) => (
-              <TableRow 
-                key={project.id} 
-                className="border-border hover:bg-accent/30 cursor-pointer transition-colors group"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <TableCell className="font-medium text-foreground">
-                  {project.name}
-                </TableCell>
-                <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                  {project.description}
-                </TableCell>
-                <TableCell className="text-muted-foreground max-w-[300px]">
-                  <p className="line-clamp-2 text-sm">{project.problem}</p>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={project.status} />
-                </TableCell>
-                <TableCell>
-                  <ProgressBar value={project.progress} className="min-w-[100px]" />
-                </TableCell>
-                <TableCell>
-                  <PriorityBadge priority={project.priority} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      {/* View Content */}
+      {renderView()}
     </div>
   );
 }

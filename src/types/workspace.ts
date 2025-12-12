@@ -9,17 +9,19 @@ export type Priority = 'high' | 'medium' | 'low';
 export interface Page {
   id: string;
   title: string;
-  icon?: string;
-  parentId?: string;
+  icon?: string | null;
+  cover_image?: string | null;
+  parent_id?: string | null;
   type: PageType;
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: string;
+  updated_at: string;
+  blocks?: Block[];
 }
 
 export interface TeamSpace {
   id: string;
   name: string;
-  icon?: string;
+  icon?: string | null;
   pages: Page[];
 }
 
@@ -52,13 +54,26 @@ export interface Notification {
   title: string;
   message: string;
   read: boolean;
-  createdAt: Date;
+  created_at: string;
 }
 
 export interface Meeting {
   id: string;
   title: string;
-  date: Date;
-  attendees: string[];
+  date: string;
+  participants?: string[];
   notes?: string;
+  created_at: string;
+}
+
+export type BlockType = 'text' | 'h1' | 'h2' | 'h3' | 'bullet-list' | 'numbered-list' | 'todo' | 'quote' | 'toggle' | 'image' | 'video' | 'bookmark' | 'code' | 'callout' | 'divider';
+
+export interface Block {
+  id: string;
+  type: string;
+  content: string | null;
+  properties: any;
+  order: number;
+  parent_block_id: string | null;
+  children?: Block[];
 }

@@ -1,12 +1,14 @@
 import { Bell, MessageSquare, UserPlus, RefreshCw, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { mockNotifications } from "@/data/mockData";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { Notification } from '@/types/workspace';
 
-const iconMap = {
+const iconMap: Record<string, any> = {
   mention: MessageSquare,
   assignment: UserPlus,
   'status-change': RefreshCw,
@@ -14,7 +16,31 @@ const iconMap = {
 };
 
 export function InboxView() {
-  const unreadCount = mockNotifications.filter(n => !n.read).length;
+  const queryClient = useQueryClient();
+  
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as Notification[];
+    }
+  });
+
+  const markAllRead = useMutation({
+    mutationFn: async () => {
+       const { error } = await supabase.from('notifications').update({ read: true }).neq('read', true);
+       if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] })
+  });
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  if (isLoading) return <div className="p-8">Loading notifications...</div>;
 
   return (
     <div className="flex-1 overflow-auto p-8 animate-fade-up">
@@ -30,7 +56,7 @@ export function InboxView() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => markAllRead.mutate()}>
             <Check className="w-4 h-4" />
             Marcar todo como leído
           </Button>
@@ -38,8 +64,11 @@ export function InboxView() {
 
         {/* Notifications List */}
         <div className="space-y-3">
-          {mockNotifications.map((notification, index) => {
-            const Icon = iconMap[notification.type];
+          {notifications.length === 0 && (
+            <div className="text-center text-muted-foreground py-8">No notifications</div>
+          )}
+          {notifications.map((notification, index) => {
+            const Icon = iconMap[notification.type] || MessageSquare;
             return (
               <Card 
                 key={notification.id}
@@ -68,7 +97,7 @@ export function InboxView() {
                         {notification.title}
                       </p>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatDistanceToNow(notification.createdAt, { addSuffix: true, locale: es })}
+                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: es })}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">

@@ -172,3 +172,16 @@ export const mockTeamSpaces: TeamSpace[] = [
     ],
   },
 ];
+
+export const mockTemplates: Page[] = [
+  { id: 'tmp1', title: 'Backlog', icon: '📋', type: 'template', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tmp2', title: 'CRM Simple', icon: '👥', type: 'template', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tmp3', title: 'Base de links', icon: '🔗', type: 'template', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tmp4', title: 'Wiki', icon: '📚', type: 'template', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tmp5', title: 'Proyecto básico', icon: '🚀', type: 'template', createdAt: new Date(), updatedAt: new Date() },
+];
+
+export const mockFavorites: Page[] = [
+  { id: 'fav1', title: 'Clientes Potenciales', icon: '🔍', type: 'database', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'fav2', title: 'To Do List', icon: '✅', type: 'database', createdAt: new Date(), updatedAt: new Date() },
+];

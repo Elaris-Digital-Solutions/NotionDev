@@ -18,7 +18,7 @@ import {
   Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mockPages, mockTeamSpaces } from "@/data/mockData";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -33,8 +33,16 @@ interface SidebarProps {
 }
 
 export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
-  const [privateOpen, setPrivateOpen] = useState(true);
+  const [favoritesOpen, setFavoritesOpen] = useState(true);
   const [teamspacesOpen, setTeamspacesOpen] = useState(true);
+  const [privateOpen, setPrivateOpen] = useState(true);
+  const [templatesOpen, setTemplatesOpen] = useState(true);
+  
+  const { pages, teamSpaces, favorites, isLoading } = useWorkspace();
+
+  if (isLoading) {
+    return <div className="w-60 h-screen bg-sidebar border-r border-sidebar-border flex items-center justify-center text-muted-foreground text-sm">Loading...</div>;
+  }
 
   return (
     <aside className="w-60 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
@@ -80,14 +88,14 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
             />
           </nav>
 
-          {/* Private Section */}
-          <Collapsible open={privateOpen} onOpenChange={setPrivateOpen} className="mt-6">
+          {/* Favorites Section */}
+          <Collapsible open={favoritesOpen} onOpenChange={setFavoritesOpen} className="mt-6">
             <CollapsibleTrigger className="flex items-center gap-1 px-2 py-1 w-full text-xs font-medium text-muted-foreground hover:text-sidebar-foreground">
-              <ChevronRight className={cn("w-3 h-3 transition-transform", privateOpen && "rotate-90")} />
-              Private
+              <ChevronRight className={cn("w-3 h-3 transition-transform", favoritesOpen && "rotate-90")} />
+              Favorites
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-0.5 mt-1">
-              {mockPages.map((page) => (
+              {favorites.map((page) => (
                 <NavItem
                   key={page.id}
                   icon={getPageIcon(page.icon)}
@@ -107,7 +115,7 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
               Teamspaces
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-1">
-              {mockTeamSpaces.map((space) => (
+              {teamSpaces.map((space) => (
                 <TeamSpaceItem
                   key={space.id}
                   space={space}
@@ -117,6 +125,39 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
               ))}
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Private Section */}
+          <Collapsible open={privateOpen} onOpenChange={setPrivateOpen} className="mt-6">
+            <CollapsibleTrigger className="flex items-center gap-1 px-2 py-1 w-full text-xs font-medium text-muted-foreground hover:text-sidebar-foreground">
+              <ChevronRight className={cn("w-3 h-3 transition-transform", privateOpen && "rotate-90")} />
+              Private
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-0.5 mt-1">
+              {pages.map((page) => (
+                <NavItem
+                  key={page.id}
+                  icon={getPageIcon(page.icon)}
+                  label={page.title}
+                  emoji={page.icon}
+                  onClick={() => onPageChange(page.id)}
+                  active={currentPage === page.id}
+                />
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Templates Section */}
+          <Collapsible open={templatesOpen} onOpenChange={setTemplatesOpen} className="mt-6">
+            <CollapsibleTrigger className="flex items-center gap-1 px-2 py-1 w-full text-xs font-medium text-muted-foreground hover:text-sidebar-foreground">
+              <ChevronRight className={cn("w-3 h-3 transition-transform", templatesOpen && "rotate-90")} />
+              Templates
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-0.5 mt-1">
+              {/* Templates would be fetched similarly, for now empty or static */}
+              <div className="px-2 py-1 text-xs text-muted-foreground">No templates</div>
+            </CollapsibleContent>
+          </Collapsible>
+
         </div>
       </ScrollArea>
 
@@ -124,6 +165,7 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
       <div className="p-2 border-t border-sidebar-border space-y-0.5">
         <NavItem icon={Settings} label="Settings" onClick={() => {}} />
         <NavItem icon={ShoppingBag} label="Marketplace" onClick={() => {}} />
+        <NavItem icon={Plus} label="New Page" onClick={() => {}} />
       </div>
     </aside>
   );
@@ -171,7 +213,7 @@ function NavItem({ icon: Icon, label, emoji, active, badge, count, onClick }: Na
 }
 
 interface TeamSpaceItemProps {
-  space: typeof mockTeamSpaces[0];
+  space: any; // Using any for now to bypass strict type checking against mock types
   currentPage: string;
   onPageChange: (page: string) => void;
 }
@@ -187,7 +229,7 @@ function TeamSpaceItem({ space, currentPage, onPageChange }: TeamSpaceItemProps)
         <span className="flex-1 text-left truncate font-medium">{space.name}</span>
       </CollapsibleTrigger>
       <CollapsibleContent className="ml-3 space-y-0.5 mt-0.5">
-        {space.pages.map((page) => (
+        {space.pages?.map((page: any) => (
           <NavItem
             key={page.id}
             icon={FileText}

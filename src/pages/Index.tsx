@@ -1,13 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { HomeView } from "@/components/views/HomeView";
-import { DatabaseView } from "@/components/views/DatabaseView";
 import { InboxView } from "@/components/views/InboxView";
 import { MeetingsView } from "@/components/views/MeetingsView";
+import { PageView } from "@/components/views/PageView";
+import { supabase } from "@/lib/supabase";
 
 const Index = () => {
-  const [currentPage, setCurrentPage] = useState('t3'); // Default to Clientes Potenciales
+  const [currentPage, setCurrentPage] = useState('home');
+  const [pageTitle, setPageTitle] = useState('');
+
+  useEffect(() => {
+    if (!['home', 'inbox', 'meetings'].includes(currentPage)) {
+      supabase.from('pages').select('title').eq('id', currentPage).single()
+        .then(({ data }) => {
+          if (data) setPageTitle(data.title);
+        });
+    }
+  }, [currentPage]);
 
   const getBreadcrumb = () => {
     switch (currentPage) {
@@ -17,10 +28,8 @@ const Index = () => {
         return ['Inbox'];
       case 'meetings':
         return ['Meetings'];
-      case 't3':
-        return ['ELARIS D.S.', 'Clientes Potenciales'];
       default:
-        return ['ELARIS D.S.'];
+        return ['ELARIS D.S.', pageTitle || 'Loading...'];
     }
   };
 
@@ -32,10 +41,8 @@ const Index = () => {
         return <InboxView />;
       case 'meetings':
         return <MeetingsView />;
-      case 't3':
-        return <DatabaseView />;
       default:
-        return <HomeView />;
+        return <PageView pageId={currentPage} />;
     }
   };
 
