@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Topbar } from "@/components/layout/Topbar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BlockEditor } from "@/components/editor/BlockEditor";
+import { BlockEditor } from "@/components/blocks/BlockEditor";
 import { Smile, Clock, User, AlertCircle, Circle } from "lucide-react";
 import { CoverImage } from "@/components/common/CoverImage";
 import { Button } from "@/components/ui/button";
