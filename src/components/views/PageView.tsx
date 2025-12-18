@@ -84,7 +84,7 @@ export function PageView({ pageId }: PageViewProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-background animate-fade-up">
       <div className="h-48 bg-gradient-to-r from-pink-100 to-blue-100 w-full group relative">
-        {page.cover_image && <img src={page.cover_image} alt="Cover" className="w-full h-full object-cover" />}
+        {page?.cover_image && <img src={page.cover_image} alt="Cover" className="w-full h-full object-cover" />}
         <Button variant="secondary" size="sm" className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           Change cover
         </Button>
