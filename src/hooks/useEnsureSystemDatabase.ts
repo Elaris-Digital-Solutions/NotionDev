@@ -115,12 +115,14 @@ export function useEnsureSystemDatabase(teamSpaceId?: string, isPrivate: boolean
                 return refreshed as DatabaseProperty[];
             }
 
-            return data as DatabaseProperty[];
+            // Filter out system properties
+            return (data as DatabaseProperty[]).filter(p => !p.name.startsWith('_') && p.name !== '_System_Properties_DO_NOT_DELETE');
         },
         enabled: !!systemDatabase?.databaseId
     });
 
     return {
+        pageId: systemDatabase?.pageId,
         databaseId: systemDatabase?.databaseId,
         properties,
         isLoading

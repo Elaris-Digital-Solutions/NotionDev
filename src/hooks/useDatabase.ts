@@ -43,26 +43,57 @@ export function useDatabase(pageId: string) {
         .order('order');
 
       if (error) throw error;
-      return data as DatabaseProperty[];
+      // Filter out system properties (starting with _)
+      return (data as DatabaseProperty[]).filter(p => !p.name.startsWith('_') && p.name !== '_System_Properties_DO_NOT_DELETE');
     },
     enabled: !!database?.id,
   });
 
   // 3. Get rows (pages)
+  // 3. Get rows (pages)
+  // Need to fetch the Page details effectively to know if we are in a "System DB" context
+  const { data: pageDetails } = useQuery({
+    queryKey: ['page_details', pageId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('pages').select('*').eq('id', pageId).single();
+      if (error) throw error;
+      return data as Page; // Explicit cast to fix TS 'never' inference
+    },
+    enabled: !!pageId
+  });
+
   const { data: rows, isLoading } = useQuery({
-    queryKey: ['database_rows', database?.id],
+    queryKey: ['database_rows', database?.id, pageDetails?.id],
     queryFn: async () => {
       if (!database?.id) return [];
-      const { data: pages, error } = await supabase
-        .from('pages')
-        .select('*')
-        .eq('parent_database_id', database.id);
+
+      let query = supabase.from('pages').select('*');
+
+      const isSystemDB = pageDetails?.title === '_System_Properties_DO_NOT_DELETE';
+
+      if (isSystemDB && pageDetails) {
+        // Special "Shadow Database" Logic
+        if (pageDetails.team_space_id) {
+          // Team Space: Fetch Root items OR Children of System DB OR Linked to System DB
+          query = query.or(`and(team_space_id.eq.${pageDetails.team_space_id},parent_id.is.null),parent_id.eq.${pageDetails.id},parent_database_id.eq.${database.id}`);
+        } else {
+          // Private Space: Fetch Root private items OR Children of System DB OR Linked
+          query = query.or(`and(owner_id.eq.${pageDetails.owner_id},team_space_id.is.null,parent_id.is.null),parent_id.eq.${pageDetails.id},parent_database_id.eq.${database.id}`);
+        }
+        // Always exclude self (System DB Page)
+        query = query.neq('id', pageDetails.id);
+      } else {
+        // Standard Database Logic
+        query = query.eq('parent_database_id', database.id);
+      }
+
+      const { data: pages, error } = await query;
 
       if (error) throw error;
 
       // For each page, fetch its property values
       // This is N+1 but okay for MVP. Ideally use a join or RPC.
-      const pagesWithProps = await Promise.all(pages.map(async (page) => {
+      const pagesWithProps = await Promise.all((pages || []).map(async (page: any) => {
         const { data: props } = await supabase
           .from('page_property_values')
           .select('*, database_properties(name)')
@@ -80,7 +111,7 @@ export function useDatabase(pageId: string) {
 
       return pagesWithProps;
     },
-    enabled: !!database?.id,
+    enabled: !!database?.id && (!!pageDetails || !!pageId),
   });
 
   // 4. Auto-create default columns if missing

@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { TableView } from "@/components/database/TableView";
+import { DatabaseView } from "@/components/views/DatabaseView";
 import { DatabaseProperty, DatabaseRow } from "@/hooks/useDatabase";
 import { Users } from "lucide-react";
 import { useEnsureSystemDatabase } from "@/hooks/useEnsureSystemDatabase";
@@ -25,45 +25,10 @@ export function TeamSpaceView() {
     });
 
     // 2. Ensure System Database & Get Properties
-    const { databaseId, properties, isLoading: propsLoading } = useEnsureSystemDatabase(teamSpaceId);
+    const { pageId: databasePageId, databaseId, isLoading: propsLoading } = useEnsureSystemDatabase(teamSpaceId);
 
-    // 3. Fetch Pages like they are Database Rows
-    const { data: rows = [], isLoading: rowsLoading } = useQuery({
-        queryKey: ['teamSpaceRules', teamSpaceId, databaseId],
-        queryFn: async () => {
-            // Filter out the system page itself
-            const { data: pages, error } = await supabase
-                .from('pages')
-                .select('*')
-                .eq('team_space_id', teamSpaceId)
-                .is('parent_id', null)
-                .neq('title', '_System_Properties_DO_NOT_DELETE'); // Hide system DB
-
-            if (error) throw error;
-
-            // Fetch properties for these pages
-            const pagesWithProps = await Promise.all(pages.map(async (page) => {
-                const { data: props } = await supabase
-                    .from('page_property_values')
-                    .select('*, database_properties(name)')
-                    // @ts-ignore
-                    .eq('page_id', page.id);
-
-                const propMap: Record<string, any> = {};
-                props?.forEach((p: any) => {
-                    if (p.database_properties?.name) {
-                        propMap[p.database_properties.name] = p.value;
-                    }
-                });
-
-                // @ts-ignore
-                return { ...page, properties: propMap } as DatabaseRow;
-            }));
-
-            return pagesWithProps;
-        },
-        enabled: !!teamSpaceId && !!databaseId
-    });
+    // 3. Fetch Pages like they are Database Rows - LOGIC MOVED TO DatabaseView (via useDatabase)
+    // We strictly use the system database now.
 
     if (spaceLoading) return <div className="p-8">Loading space...</div>;
     if (!teamSpace) return <div className="p-8">Team Space not found</div>;
@@ -78,19 +43,19 @@ export function TeamSpaceView() {
                     <h1 className="text-4xl font-bold text-foreground">{teamSpace.name}</h1>
                 </div>
                 <p className="text-muted-foreground mb-4">
-                    Managing {rows.length} pages in this workspace.
+                    Managing pages in this workspace.
                 </p>
             </div>
 
-            <TeamMembersLoader teamId={teamSpaceId} render={(members) => (
-                <TableView
-                    rows={rows}
-                    properties={properties}
-                    pageId={teamSpaceId || ''}
-                    databaseId={databaseId} // Use Real Shadow DB ID
-                    members={members}
+            {/* Use DatabaseView to get standard Notion headers (New, Filter, Sort, View Switcher) */}
+            {/* We pass the System Database Page ID */}
+            {databasePageId && (
+                <DatabaseView
+                    pageId={databasePageId}
+                    title={teamSpace.name}
+                    icon={teamSpace.icon || '👥'}
                 />
-            )} />
+            )}
         </div>
     );
 }
