@@ -50,11 +50,14 @@ export function TeamSpaceView() {
             {/* Use DatabaseView to get standard Notion headers (New, Filter, Sort, View Switcher) */}
             {/* We pass the System Database Page ID */}
             {databasePageId && (
-                <DatabaseView
-                    pageId={databasePageId}
-                    title={teamSpace.name}
-                    icon={teamSpace.icon || '👥'}
-                />
+                <TeamMembersLoader teamId={teamSpaceId} render={(members) => (
+                    <DatabaseView
+                        pageId={databasePageId}
+                        title={teamSpace.name}
+                        icon={teamSpace.icon || '👥'}
+                        members={members}
+                    />
+                )} />
             )}
         </div>
     );

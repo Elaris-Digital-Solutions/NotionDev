@@ -125,34 +125,9 @@ export function useDatabase(pageId: string) {
 
   const qc = useQueryClient();
 
-  useEffect(() => {
-    if (!database?.id || !properties || isLoading) return;
+  // 4. Removed auto-create default columns logic to prevent race conditions with useEnsureSystemDatabase.
+  // The System Database creation logic in useEnsureSystemDatabase handles this.
 
-    const defaults = [
-      { name: 'Status', type: 'status' },
-      { name: 'Priority', type: 'priority' },
-      { name: 'Due Date', type: 'date' },
-      { name: 'Responsible', type: 'person' }
-    ];
-
-    const missing = defaults.filter(d => !properties.find(p => p.name === d.name));
-
-    if (missing.length > 0) {
-      const createMissing = async () => {
-        for (const m of missing) {
-          await supabase.from('database_properties').insert({
-            database_id: database.id,
-            name: m.name,
-            type: m.type,
-            order: 99
-          });
-        }
-        qc.invalidateQueries({ queryKey: ['database_properties', database.id] });
-      };
-
-      createMissing();
-    }
-  }, [database?.id, properties?.length, isLoading]); // specific deps to avoid loop
 
   return {
     database,

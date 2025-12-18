@@ -158,6 +158,12 @@ export function useWorkspaceMutations() {
 
   const permanentlyDeletePage = useMutation({
     mutationFn: async (pageId: string) => {
+      // Guard against deleting System Database
+      const { data: page } = await supabase.from('pages').select('title').eq('id', pageId).single();
+      if (page?.title === '_System_Properties_DO_NOT_DELETE') {
+        throw new Error('SystemPropertyDoNotDelete: Cannot delete the system database.');
+      }
+
       // @ts-ignore
       const { error } = await supabase
         .from('pages')
@@ -168,6 +174,8 @@ export function useWorkspaceMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trash'] });
+      queryClient.invalidateQueries({ queryKey: ['teamSpaces'] });
+      queryClient.invalidateQueries({ queryKey: ['pages'] });
     },
   });
 
