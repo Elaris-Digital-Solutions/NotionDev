@@ -6,11 +6,12 @@ import { HomeView } from "@/components/views/HomeView";
 import { InboxView } from "@/components/views/InboxView";
 import { MeetingsView } from "@/components/views/MeetingsView";
 import { PageView } from "@/components/views/PageView";
+import { TeamSpaceView } from "@/components/views/TeamSpaceView";
 import { supabase } from "@/lib/supabase";
 import { useParams, useNavigate } from "react-router-dom";
 
 interface IndexProps {
-  view?: 'home' | 'inbox' | 'meetings' | 'page';
+  view?: 'home' | 'inbox' | 'meetings' | 'page' | 'teamspace';
 }
 
 const Index = ({ view = 'home' }: IndexProps) => {
@@ -31,7 +32,9 @@ const Index = ({ view = 'home' }: IndexProps) => {
   }, [view, pageId]);
 
   const handlePageChange = (page: string) => {
-    if (['home', 'inbox', 'meetings'].includes(page)) {
+    if (page.startsWith('teamspace/')) {
+      navigate(`/${page}`);
+    } else if (['home', 'inbox', 'meetings'].includes(page)) {
       navigate(page === 'home' ? '/' : `/${page}`);
     } else {
       navigate(`/page/${page}`);
@@ -64,6 +67,8 @@ const Index = ({ view = 'home' }: IndexProps) => {
         return <MeetingsView />;
       case 'page':
         return pageId ? <PageView pageId={pageId} /> : <HomeView />;
+      case 'teamspace':
+        return <TeamSpaceView />;
       default:
         return <HomeView />;
     }

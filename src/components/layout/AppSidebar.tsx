@@ -424,11 +424,20 @@ function TeamSpaceItem({ space, currentPage, onPageChange }: TeamSpaceItemProps)
     <>
       <Collapsible open={open} onOpenChange={setOpen}>
         <div className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-sidebar-accent/50 transition-colors group/item">
-          <CollapsibleTrigger className="flex items-center gap-2 text-sm text-sidebar-foreground w-full">
-            <ChevronRight className={cn("w-3 h-3 transition-transform", open && "rotate-90")} />
-            <span>{space.icon}</span>
-            <span className="flex-1 text-left truncate font-medium">{space.name}</span>
-          </CollapsibleTrigger>
+          <div className="flex items-center gap-2 w-full">
+            <CollapsibleTrigger asChild>
+              <div className="p-1 hover:bg-sidebar-accent rounded cursor-pointer transition-colors">
+                <ChevronRight className={cn("w-3 h-3 transition-transform text-muted-foreground", open && "rotate-90")} />
+              </div>
+            </CollapsibleTrigger>
+            <button
+              onClick={() => onPageChange(`teamspace/${space.id}`)}
+              className="flex items-center gap-2 text-sm text-sidebar-foreground flex-1 text-left truncate font-medium hover:underline"
+            >
+              <span>{space.icon}</span>
+              <span>{space.name}</span>
+            </button>
+          </div>
           <div className="flex items-center opacity-0 group-hover/item:opacity-100 transition-opacity">
             <button
               onClick={(e) => {
