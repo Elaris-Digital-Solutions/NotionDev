@@ -12,6 +12,8 @@ export interface Page {
   icon?: string | null;
   cover_image?: string | null;
   parent_id?: string | null;
+  team_space_id?: string | null;
+  owner_id: string;
   type: PageType;
   created_at: string;
   updated_at: string;

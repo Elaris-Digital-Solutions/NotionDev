@@ -219,10 +219,19 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
           {/* Private Section */}
           <Collapsible open={privateOpen} onOpenChange={setPrivateOpen} className="mt-6">
             <div className="flex items-center justify-between px-2 py-1 group/header">
-              <CollapsibleTrigger className="flex items-center gap-1 w-full text-xs font-medium text-muted-foreground hover:text-sidebar-foreground">
-                <ChevronRight className={cn("w-3 h-3 transition-transform", privateOpen && "rotate-90")} />
-                Private
-              </CollapsibleTrigger>
+              <div className="flex items-center gap-2 w-full">
+                <CollapsibleTrigger asChild>
+                  <div className="p-1 hover:bg-sidebar-accent rounded cursor-pointer transition-colors">
+                    <ChevronRight className={cn("w-3 h-3 transition-transform text-muted-foreground", privateOpen && "rotate-90")} />
+                  </div>
+                </CollapsibleTrigger>
+                <button
+                  onClick={() => onPageChange('private')}
+                  className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-sidebar-foreground flex-1 text-left"
+                >
+                  Private
+                </button>
+              </div>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -247,17 +256,7 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Templates Section */}
-          <Collapsible open={templatesOpen} onOpenChange={setTemplatesOpen} className="mt-6">
-            <CollapsibleTrigger className="flex items-center gap-1 px-2 py-1 w-full text-xs font-medium text-muted-foreground hover:text-sidebar-foreground">
-              <ChevronRight className={cn("w-3 h-3 transition-transform", templatesOpen && "rotate-90")} />
-              Templates
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-0.5 mt-1">
-              {/* Templates would be fetched similarly, for now empty or static */}
-              <div className="px-2 py-1 text-xs text-muted-foreground">No templates</div>
-            </CollapsibleContent>
-          </Collapsible>
+
 
         </div>
       </ScrollArea>
@@ -278,25 +277,20 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <div className="flex items-center justify-between py-2 border-b">
-                <div className="space-y-0.5">
-                  <Label>Dark Mode</Label>
-                  <p className="text-xs text-muted-foreground">Toggle dark mode theme</p>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Email</Label>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  </div>
                 </div>
-                {/* Switch would go here */}
-                <div className="text-xs text-muted-foreground">System</div>
+                <Button variant="destructive" onClick={() => {
+                  supabase.auth.signOut();
+                  setIsSettingsOpen(false);
+                }}>
+                  Sign Out
+                </Button>
               </div>
-              <div className="flex items-center justify-center py-2 border-b">
-                <div className="space-y-0.5 flex-1">
-                  <Label>Notifications</Label>
-                  <p className="text-xs text-muted-foreground">Manage email notifications</p>
-                </div>
-                <div className="text-xs text-muted-foreground">Enabled</div>
-              </div>
-
-
-
-
             </div>
             <DialogFooter>
               <Button onClick={() => setIsSettingsOpen(false)}>Done</Button>
@@ -308,36 +302,7 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
 
 
 
-        <Dialog open={isTrashOpen} onOpenChange={setIsTrashOpen}>
-          <DialogTrigger asChild>
-            <NavItem icon={Trash} label="Trash" onClick={() => setIsTrashOpen(true)} />
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Trash</DialogTitle>
-              <DialogDescription>
-                Pages in trash for you.
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="h-[300px]">
-              <div className="space-y-2">
-                {trash.length === 0 && <div className="text-center text-muted-foreground py-8">Trash is empty</div>}
-                {trash.map((page) => (
-                  <div key={page.id} className="flex items-center justify-between p-2 border rounded hover:bg-accent">
-                    <div className="flex items-center gap-2">
-                      <span>{page.icon || '📄'}</span>
-                      <span>{page.title}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => restorePage.mutate(page.id)}>Restore</Button>
-                      <Button size="sm" variant="destructive" onClick={() => permanentlyDeletePage.mutate(page.id)}>Delete</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
+
 
 
       </div>

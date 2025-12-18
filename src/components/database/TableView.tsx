@@ -12,7 +12,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { DatabaseRow, DatabaseProperty } from "@/hooks/useDatabase";
 import { Link } from "react-router-dom";
 import { useDatabaseMutations } from "@/hooks/useDatabaseMutations";
-import { Plus, MoreHorizontal, Trash } from "lucide-react";
+import { Plus, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,15 +27,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
 
 interface TableViewProps {
   rows: DatabaseRow[];
   properties: DatabaseProperty[];
   pageId: string;
   databaseId?: string;
+  members?: any[]; // Users for 'person' column
 }
 
-export function TableView({ rows, properties, pageId, databaseId }: TableViewProps) {
+export function TableView({ rows, properties, pageId, databaseId, members = [] }: TableViewProps) {
   const { addProperty, deleteProperty, updatePropertyValue } = useDatabaseMutations(databaseId);
   const [newPropName, setNewPropName] = useState("");
   const [newPropType, setNewPropType] = useState("text");
@@ -113,6 +116,7 @@ export function TableView({ rows, properties, pageId, databaseId }: TableViewPro
                           <SelectItem value="status">Status</SelectItem>
                           <SelectItem value="priority">Priority</SelectItem>
                           <SelectItem value="date">Date</SelectItem>
+                          <SelectItem value="person">Person</SelectItem>
                         </SelectContent>
                       </Select>
                       <Button onClick={handleAddProperty}>Add</Button>
@@ -137,6 +141,7 @@ export function TableView({ rows, properties, pageId, databaseId }: TableViewPro
                     value={row.properties[prop.name]}
                     type={prop.type}
                     onChange={(value) => updatePropertyValue.mutate({ pageId: row.id, propertyId: prop.id, value })}
+                    members={members}
                   />
                 </TableCell>
               ))}
@@ -149,7 +154,7 @@ export function TableView({ rows, properties, pageId, databaseId }: TableViewPro
   );
 }
 
-function EditableCell({ value, type, onChange }: { value: any; type: string; onChange: (val: any) => void }) {
+function EditableCell({ value, type, onChange, members = [] }: { value: any; type: string; onChange: (val: any) => void; members?: any[] }) {
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
 
@@ -191,33 +196,50 @@ function EditableCell({ value, type, onChange }: { value: any; type: string; onC
     }
     if (type === 'date') {
       return (
-        <Input
-          type="date"
-          className="h-8 border-none shadow-none focus-visible:ring-0"
-          value={localValue || ''}
-          onChange={(e) => {
-            const val = e.target.value;
-            setLocalValue(val);
-            onChange(val);
-            // Don't close immediately for date to allow selection? Actually date input blur handles it.
-          }}
-          onBlur={handleBlur}
-          autoFocus
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" className="h-8 w-full justify-start font-normal">
+              {localValue ? format(new Date(localValue), "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={localValue ? new Date(localValue) : undefined}
+              onSelect={(d) => {
+                const val = d?.toISOString();
+                setLocalValue(val);
+                onChange(val);
+                setIsEditing(false);
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
       );
     }
-    // For 'person', we ideally need a list of users. For now, simple text fallback or mock select.
     // Real implementation requires fetching workspace members.
     if (type === 'person') {
       return (
-        <Input
-          className="h-8 border-none shadow-none focus-visible:ring-0"
-          placeholder="@user..."
-          value={localValue || ''}
-          onChange={(e) => setLocalValue(e.target.value)}
-          onBlur={handleBlur}
-          autoFocus
-        />
+        <Select value={localValue} onValueChange={(val) => { setLocalValue(val); onChange(val); setIsEditing(false); }}>
+          <SelectTrigger className="h-8 border-none shadow-none">
+            <SelectValue placeholder="@user" />
+          </SelectTrigger>
+          <SelectContent>
+            {members.length === 0 ? (
+              <div className="p-2 text-xs text-muted-foreground">No members found</div>
+            ) : (
+              members.map(member => (
+                <SelectItem key={member.id} value={member.full_name || member.email || 'Unknown'}>
+                  <div className="flex items-center gap-2">
+                    {/* Avatar could go here */}
+                    <span>{member.full_name || member.email}</span>
+                  </div>
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
       );
     }
 

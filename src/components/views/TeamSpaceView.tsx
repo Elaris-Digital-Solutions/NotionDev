@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { TableView } from "@/components/database/TableView";
 import { DatabaseProperty, DatabaseRow } from "@/hooks/useDatabase";
 import { Users } from "lucide-react";
+import { useEnsureSystemDatabase } from "@/hooks/useEnsureSystemDatabase";
 
 export function TeamSpaceView() {
     const { teamSpaceId } = useParams();
@@ -23,23 +24,20 @@ export function TeamSpaceView() {
         enabled: !!teamSpaceId
     });
 
-    // 2. Fetch Pages like they are Database Rows
-    // We mock a "Database Property" schema for the Team Space view to enforce the "Table" look
-    const properties: DatabaseProperty[] = [
-        { id: 'status', name: 'Status', type: 'status' },
-        { id: 'priority', name: 'Priority', type: 'priority' },
-        { id: 'dueDate', name: 'Due Date', type: 'date' },
-        { id: 'responsible', name: 'Responsible', type: 'person' },
-    ];
+    // 2. Ensure System Database & Get Properties
+    const { databaseId, properties, isLoading: propsLoading } = useEnsureSystemDatabase(teamSpaceId);
 
+    // 3. Fetch Pages like they are Database Rows
     const { data: rows = [], isLoading: rowsLoading } = useQuery({
-        queryKey: ['teamSpaceRules', teamSpaceId],
+        queryKey: ['teamSpaceRules', teamSpaceId, databaseId],
         queryFn: async () => {
+            // Filter out the system page itself
             const { data: pages, error } = await supabase
                 .from('pages')
                 .select('*')
                 .eq('team_space_id', teamSpaceId)
-                .is('parent_id', null); // Only roots
+                .is('parent_id', null)
+                .neq('title', '_System_Properties_DO_NOT_DELETE'); // Hide system DB
 
             if (error) throw error;
 
@@ -64,7 +62,7 @@ export function TeamSpaceView() {
 
             return pagesWithProps;
         },
-        enabled: !!teamSpaceId
+        enabled: !!teamSpaceId && !!databaseId
     });
 
     if (spaceLoading) return <div className="p-8">Loading space...</div>;
@@ -84,14 +82,47 @@ export function TeamSpaceView() {
                 </p>
             </div>
 
-            <TableView
-                rows={rows}
-                properties={properties}
-                pageId={teamSpaceId || ''}
-            // We don't pass databaseId because this is a virtual view, 
-            // editing columns might be restricted or we need a real DB for that.
-            // For now, rows are editable.
-            />
+            <TeamMembersLoader teamId={teamSpaceId} render={(members) => (
+                <TableView
+                    rows={rows}
+                    properties={properties}
+                    pageId={teamSpaceId || ''}
+                    databaseId={databaseId} // Use Real Shadow DB ID
+                    members={members}
+                />
+            )} />
         </div>
     );
+}
+
+function TeamMembersLoader({ teamId, render }: { teamId?: string, render: (members: any[]) => React.ReactNode }) {
+    const { data: members = [] } = useQuery({
+        queryKey: ['teamMembers', teamId],
+        queryFn: async () => {
+            if (!teamId) return [];
+            const { data, error } = await supabase
+                .from('team_members')
+                .select(`
+                    user_id,
+                    profiles:user_id (
+                        id,
+                        email,
+                        full_name,
+                        avatar_url
+                    )
+                `)
+                .eq('team_id', teamId);
+
+            if (error) {
+                console.error('Error fetching members:', error);
+                return [];
+            }
+            // Simplify structure
+            // @ts-ignore
+            return data.map(m => m.profiles).filter(Boolean);
+        },
+        enabled: !!teamId
+    });
+
+    return <>{render(members)}</>;
 }

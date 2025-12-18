@@ -32,6 +32,7 @@ const App = () => (
               <Route path="/meetings" element={<Index view="meetings" />} />
               <Route path="/page/:pageId" element={<Index view="page" />} />
               <Route path="/teamspace/:teamSpaceId" element={<Index view="teamspace" />} />
+              <Route path="/private" element={<Index view="private" />} />
             </Route>
 
             {/* Catch-all */}

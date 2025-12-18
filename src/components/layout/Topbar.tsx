@@ -9,8 +9,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 interface TopbarProps {
   breadcrumb?: string[];
@@ -58,16 +60,8 @@ export function Topbar({ breadcrumb = ['Workspace', 'Page'], pageId, onPageChang
         </nav>
       </div>
 
-      {/* Center Section: Global Search */}
-      <div className="flex-1 max-w-md mx-auto">
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search..."
-            className="h-8 pl-8 bg-muted/50 border-none focus-visible:ring-1"
-          />
-        </div>
-      </div>
+      {/* Center Section: Spacer (Search removed as it was non-functional, use Sidebar search) */}
+      <div className="flex-1" />
 
       {/* Right Section: Actions */}
       <div className="flex items-center gap-1">
@@ -87,10 +81,6 @@ export function Topbar({ breadcrumb = ['Workspace', 'Page'], pageId, onPageChang
           </>
         )}
 
-
-
-        <div className="h-4 w-[1px] bg-border mx-1" />
-
         <Button
           size="sm"
           className="h-7 px-2 gap-1 bg-primary text-primary-foreground hover:bg-primary/90"
@@ -101,12 +91,23 @@ export function Topbar({ breadcrumb = ['Workspace', 'Page'], pageId, onPageChang
         </Button>
 
         <div className="ml-2">
-          <Avatar className="w-7 h-7">
-            <AvatarImage src="https://github.com/shadcn.png" />
-            <AvatarFallback>CN</AvatarFallback>
-          </Avatar>
+          <UserAvatar />
         </div>
       </div>
     </header>
+  );
+}
+
+function UserAvatar() {
+  const { user } = useAuth();
+  if (!user) return null;
+
+  const initials = user.email?.substring(0, 2).toUpperCase() || "U";
+
+  return (
+    <Avatar className="w-7 h-7">
+      <AvatarImage src={user.user_metadata?.avatar_url} />
+      <AvatarFallback>{initials}</AvatarFallback>
+    </Avatar>
   );
 }

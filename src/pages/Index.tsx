@@ -7,11 +7,12 @@ import { InboxView } from "@/components/views/InboxView";
 import { MeetingsView } from "@/components/views/MeetingsView";
 import { PageView } from "@/components/views/PageView";
 import { TeamSpaceView } from "@/components/views/TeamSpaceView";
+import { PrivateSpaceView } from "@/components/views/PrivateSpaceView";
 import { supabase } from "@/lib/supabase";
 import { useParams, useNavigate } from "react-router-dom";
 
 interface IndexProps {
-  view?: 'home' | 'inbox' | 'meetings' | 'page' | 'teamspace';
+  view?: 'home' | 'inbox' | 'meetings' | 'page' | 'teamspace' | 'private';
 }
 
 const Index = ({ view = 'home' }: IndexProps) => {
@@ -69,6 +70,8 @@ const Index = ({ view = 'home' }: IndexProps) => {
         return pageId ? <PageView pageId={pageId} /> : <HomeView />;
       case 'teamspace':
         return <TeamSpaceView />;
+      case 'private':
+        return <PrivateSpaceView />;
       default:
         return <HomeView />;
     }

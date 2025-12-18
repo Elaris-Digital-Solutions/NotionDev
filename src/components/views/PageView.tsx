@@ -6,7 +6,6 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BlockEditor } from "@/components/blocks/BlockEditor";
 import { Smile, Clock, User, AlertCircle, Circle } from "lucide-react";
-import { CoverImage } from "@/components/common/CoverImage";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -17,6 +16,8 @@ import { useDatabaseMutations } from "@/hooks/useDatabaseMutations";
 import { usePage } from "@/hooks/usePage";
 import { usePageMutations } from "@/hooks/usePageMutations";
 import { DatabaseView } from "@/components/views/DatabaseView";
+import { useEnsureSystemDatabase } from "@/hooks/useEnsureSystemDatabase";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 interface PageViewProps {
   pageId: string;
@@ -28,50 +29,57 @@ export function PageView({ pageId }: PageViewProps) {
   const { updatePage, updateBlock, deleteBlock, createBlock, moveBlock } = usePageMutations(pageId);
   const { updatePropertyValue } = useDatabaseMutations();
 
-  // Fetch Properties (If it's part of a database or team space)
-  const { data: properties = {} } = useQuery({
-    queryKey: ['pageProperties', pageId],
+  // 2. Ensure System Database & Get Definitions
+  const { properties: definitions = [] } = useEnsureSystemDatabase(page?.team_space_id || undefined, !page?.team_space_id);
+
+  // Fetch Current Values
+  const { data: values = {} } = useQuery({
+    queryKey: ['pagePropertyValues', pageId],
     queryFn: async () => {
       const { data: props } = await supabase
         .from('page_property_values')
         .select('*, database_properties(name)')
         .eq('page_id', pageId);
 
-      const propMap: Record<string, any> = {};
+      const valMap: Record<string, any> = {};
       props?.forEach((p: any) => {
         if (p.database_properties?.name) {
-          propMap[p.database_properties.name] = {
+          valMap[p.database_properties.name] = {
             value: p.value,
-            id: p.database_properties.id, // We need property ID to update
-            propId: p.property_id
+            propId: p.property_id // The ID of the value row if we needed to update specific row, but we usually upsert by page_id + property_id
           };
         }
       });
-      return propMap;
-    }
+      return valMap;
+    },
+    enabled: !!pageId
   });
 
-  // Properties we want to show explicitly
-  const displayProperties = ['Status', 'Priority', 'Due Date', 'Responsible'];
+  // Combine Definitions with Values
+  // We want to show all definitions.
+  // We need the property definition ID to update.
 
-  if (isLoading) {
-    return (
-      <div className="flex-1 p-8 space-y-4">
-        <Skeleton className="h-12 w-3/4" />
-        <Skeleton className="h-4 w-1/2" />
-        <div className="space-y-2 mt-8">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-        </div>
-      </div>
-    );
-  }
+  // Fetch Members (if in team space) or Self (if private)
+  const { user } = useAuth();
+  const { data: members = [] } = useQuery({
+    queryKey: ['pageMembers', page?.team_space_id],
+    queryFn: async () => {
+      if (!page?.team_space_id) {
+        // Private: Just me
+        return user ? [{ id: user.id, full_name: user.user_metadata?.full_name || 'Me', email: user.email }] : [];
+      }
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('user_id, profiles(id, email, full_name)')
+        .eq('team_id', page.team_space_id);
 
-  if (!page) return <div>Page not found</div>;
-  if (page.type === 'database') {
-    return <DatabaseView title={page.title} icon={page.icon || undefined} pageId={page.id} />;
-  }
+      if (error) return [];
+      // @ts-ignore
+      return data.map(d => d.profiles).filter(Boolean);
+    },
+    enabled: !!page
+  });
+
 
   return (
     <div className="flex-1 overflow-y-auto bg-background animate-fade-up">
@@ -83,7 +91,6 @@ export function PageView({ pageId }: PageViewProps) {
       </div>
 
       <div className="max-w-4xl mx-auto px-12 pb-32 -mt-12 relative z-10">
-        {/* Icon & Title */}
         <div className="group relative mb-4">
           <div className="text-7xl mb-4 hover:bg-accent/20 w-fit rounded p-2 cursor-pointer transition-colors">
             {page.icon || '📄'}
@@ -105,31 +112,20 @@ export function PageView({ pageId }: PageViewProps) {
 
         {/* Properties Panel */}
         <div className="flex flex-col gap-2 mb-8 border-b pb-4">
-          {displayProperties.map(propName => {
-            const propData = properties[propName];
-            // Only show if we have data OR if we want to allow adding it?
-            // For now, let's just attempt to show placeholders if missing is tricky without property IDs.
-            // Actually, useDatabase ensures properties exist for database.
-            // If this is a random page, it might not have them.
-
-            // Hack: If we don't have the property ID, we can't edit it easily without fetching definitions.
-            // But for Team Spaces, useDatabase should have created them? 
-            // Wait, useDatabase runs on DatabaseView. 
-            // We might need to ensure properties exist here too.
-
-            if (!propData) return null; // Skip if property doesn't exist on this page's "database" context
-
+          {definitions.map((def: any) => {
+            const currentVal = values[def.name]?.value;
             return (
-              <div key={propName} className="flex items-center h-8">
+              <div key={def.id} className="flex items-center h-8">
                 <div className="w-32 flex items-center gap-2 text-muted-foreground text-sm">
-                  {getPropIcon(propName)}
-                  <span>{propName}</span>
+                  {getPropIcon(def.name)}
+                  <span>{def.name}</span>
                 </div>
                 <div className="flex-1 text-sm">
                   <PropertyEditor
-                    type={getPropType(propName)}
-                    value={propData.value}
-                    onChange={(val) => updatePropertyValue.mutate({ pageId, propertyId: propData.propId, value: val })}
+                    type={def.type}
+                    value={currentVal}
+                    onChange={(val) => updatePropertyValue.mutate({ pageId, propertyId: def.id, value: val })}
+                    members={members}
                   />
                 </div>
               </div>
@@ -137,7 +133,6 @@ export function PageView({ pageId }: PageViewProps) {
           })}
         </div>
 
-        {/* Content */}
         <div className="pb-32">
           <BlockEditor
             blocks={blocks}
@@ -175,7 +170,7 @@ function getPropType(name: string) {
   return 'text';
 }
 
-function PropertyEditor({ type, value, onChange }: { type: string, value: any, onChange: (val: any) => void }) {
+function PropertyEditor({ type, value, onChange, members = [] }: { type: string, value: any, onChange: (val: any) => void, members?: any[] }) {
   if (type === 'status') {
     return (
       <Select value={value} onValueChange={onChange}>
@@ -224,9 +219,24 @@ function PropertyEditor({ type, value, onChange }: { type: string, value: any, o
       </Popover>
     );
   }
-  // Person (Mock for now)
+
   if (type === 'person') {
-    return <div className="px-2 py-0.5 hover:bg-muted/50 rounded cursor-text">{value || <span className="text-muted-foreground">Empty</span>}</div>;
+    return (
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-7 border-none shadow-none w-fit p-0 h-auto hover:bg-muted/50 px-2 rounded">
+          <SelectValue placeholder="Empty" />
+        </SelectTrigger>
+        <SelectContent>
+          {members.length === 0 ? <div className="p-2 text-xs">No members</div> :
+            members.map(m => (
+              <SelectItem key={m.id} value={m.full_name || m.email}>
+                {m.full_name || m.email}
+              </SelectItem>
+            ))
+          }
+        </SelectContent>
+      </Select>
+    );
   }
 
   return <div className="px-2 py-0.5 hover:bg-muted/50 rounded cursor-text">{value || <span className="text-muted-foreground">Empty</span>}</div>;
