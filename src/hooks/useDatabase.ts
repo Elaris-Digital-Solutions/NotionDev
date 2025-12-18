@@ -87,7 +87,7 @@ export function useDatabase(pageId: string) {
         query = query.eq('parent_database_id', database.id);
       }
 
-      const { data: pages, error } = await query;
+      const { data: pages, error } = await query.neq('title', '_System_Properties_DO_NOT_DELETE');
 
       if (error) throw error;
 
