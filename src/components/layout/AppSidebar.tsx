@@ -243,16 +243,18 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
               </button>
             </div>
             <CollapsibleContent className="space-y-0.5 mt-1">
-              {pages.map((page) => (
-                <NavItem
-                  key={page.id}
-                  icon={getPageIcon(page.icon)}
-                  label={page.title}
-                  emoji={page.icon}
-                  onClick={() => onPageChange(page.id)}
-                  active={currentPage === page.id}
-                />
-              ))}
+              {pages
+                .filter(page => page.title !== '_System_Properties_DO_NOT_DELETE' && !page.title.startsWith('_'))
+                .map((page) => (
+                  <NavItem
+                    key={page.id}
+                    icon={getPageIcon(page.icon)}
+                    label={page.title}
+                    emoji={page.icon}
+                    onClick={() => onPageChange(page.id)}
+                    active={currentPage === page.id}
+                  />
+                ))}
             </CollapsibleContent>
           </Collapsible>
 
@@ -425,21 +427,22 @@ function TeamSpaceItem({ space, currentPage, onPageChange }: TeamSpaceItemProps)
           </div>
         </div>
         <CollapsibleContent className="ml-3 space-y-0.5 mt-0.5">
-          {space.pages?.map((page: any) => (
-            <NavItem
-              key={page.id}
-              icon={FileText}
-              label={page.title}
-              emoji={page.icon}
-              onClick={() => onPageChange(page.id)}
-              active={currentPage === page.id}
-              onDelete={() => {
-                if (confirm("Delete this page?")) {
-                  permanentlyDeletePage.mutate(page.id)
-                }
-              }}
-            />
-          ))}
+          {space.pages?.filter((page: any) => page.title !== '_System_Properties_DO_NOT_DELETE' && !page.title.startsWith('_'))
+            .map((page: any) => (
+              <NavItem
+                key={page.id}
+                icon={FileText}
+                label={page.title}
+                emoji={page.icon}
+                onClick={() => onPageChange(page.id)}
+                active={currentPage === page.id}
+                onDelete={() => {
+                  if (confirm("Delete this page?")) {
+                    permanentlyDeletePage.mutate(page.id)
+                  }
+                }}
+              />
+            ))}
         </CollapsibleContent>
       </Collapsible>
       <TeamSpaceSettings
