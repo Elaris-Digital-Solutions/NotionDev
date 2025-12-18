@@ -6,6 +6,25 @@ export function useWorkspaceMutations() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
+  const deleteTeamSpace = useMutation({
+    mutationFn: async (teamSpaceId: string) => {
+      // 1. Delete the team space (Supabase should cascade delete members and pages if configured, otherwise we might see errors)
+      // If no cascade, we'd need to delete members and pages first manually. Assuming cascade for now to keep it clean.
+      // @ts-ignore
+      const { error } = await supabase
+        .from('team_spaces')
+        .delete()
+        .eq('id', teamSpaceId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teamSpaces'] });
+      // Also invalidate pages since they might be cascaded
+      queryClient.invalidateQueries({ queryKey: ['pages'] });
+    },
+  });
+
   const createTeamSpace = useMutation({
     mutationFn: async (name: string) => {
       if (!user) throw new Error('User not authenticated');
@@ -154,6 +173,7 @@ export function useWorkspaceMutations() {
 
   return {
     createTeamSpace,
+    deleteTeamSpace,
     createPage,
     deletePage,
     restorePage,

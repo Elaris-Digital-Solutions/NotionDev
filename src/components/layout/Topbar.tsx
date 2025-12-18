@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search, Plus, Bell, ChevronLeft, ChevronRight, Star, MoreHorizontal, Home, Calendar, Inbox, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useWorkspaceMutations } from "@/hooks/useWorkspaceMutations";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SharePageModal } from "@/components/modals/SharePageModal";
@@ -14,10 +15,19 @@ import {
 interface TopbarProps {
   breadcrumb?: string[];
   pageId?: string;
+  onPageChange?: (pageId: string) => void;
 }
 
-export function Topbar({ breadcrumb = ['ELARIS D.S.', 'Clientes Potenciales'], pageId }: TopbarProps) {
+export function Topbar({ breadcrumb = ['Workspace', 'Page'], pageId, onPageChange }: TopbarProps) {
   const [shareOpen, setShareOpen] = useState(false);
+  const { createPage } = useWorkspaceMutations();
+
+  const handleCreatePage = async () => {
+    const newPage = await createPage.mutateAsync({});
+    if (newPage && onPageChange) {
+      onPageChange(newPage.id);
+    }
+  };
 
   return (
     <header className="h-12 border-b border-border bg-background flex items-center justify-between px-3 gap-4">
@@ -31,7 +41,7 @@ export function Topbar({ breadcrumb = ['ELARIS D.S.', 'Clientes Potenciales'], p
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
-        
+
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1 text-sm hidden md:flex">
           {breadcrumb.map((item, index) => (
@@ -52,8 +62,8 @@ export function Topbar({ breadcrumb = ['ELARIS D.S.', 'Clientes Potenciales'], p
       <div className="flex-1 max-w-md mx-auto">
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search..." 
+          <Input
+            placeholder="Search..."
             className="h-8 pl-8 bg-muted/50 border-none focus-visible:ring-1"
           />
         </div>
@@ -63,9 +73,9 @@ export function Topbar({ breadcrumb = ['ELARIS D.S.', 'Clientes Potenciales'], p
       <div className="flex items-center gap-1">
         {pageId && (
           <>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
               onClick={() => setShareOpen(true)}
             >
@@ -77,19 +87,15 @@ export function Topbar({ breadcrumb = ['ELARIS D.S.', 'Clientes Potenciales'], p
           </>
         )}
 
-        <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground">
-          <Home className="w-4 h-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground">
-          <Calendar className="w-4 h-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground">
-          <Inbox className="w-4 h-4" />
-        </Button>
-        
+
+
         <div className="h-4 w-[1px] bg-border mx-1" />
 
-        <Button size="sm" className="h-7 px-2 gap-1 bg-primary text-primary-foreground hover:bg-primary/90">
+        <Button
+          size="sm"
+          className="h-7 px-2 gap-1 bg-primary text-primary-foreground hover:bg-primary/90"
+          onClick={handleCreatePage}
+        >
           <Plus className="w-3 h-3" />
           <span className="text-xs font-medium">New Page</span>
         </Button>

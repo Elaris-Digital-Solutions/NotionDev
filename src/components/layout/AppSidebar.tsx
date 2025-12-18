@@ -104,9 +104,11 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
       <div className="p-3 border-b border-sidebar-border">
         <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-sidebar-accent transition-colors">
           <div className="w-6 h-6 rounded bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold">
-            E
+            {user?.email?.[0].toUpperCase() || 'U'}
           </div>
-          <span className="font-semibold text-sm text-sidebar-foreground">ELARIS Digital Sol...</span>
+          <span className="font-semibold text-sm text-sidebar-foreground truncate" title={user?.email || "User"}>
+            {user?.email ? user.email.split('@')[0] : "My Workspace"}
+          </span>
           <ChevronDown className="w-4 h-4 text-muted-foreground ml-auto" />
         </button>
       </div>
@@ -257,8 +259,10 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
         </div>
       </ScrollArea>
 
+
       {/* Bottom Section */}
       <div className="p-2 border-t border-sidebar-border space-y-0.5">
+        <NavItem icon={Plus} label="New Page" onClick={() => handleCreatePage()} />
         <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
           <DialogTrigger asChild>
             <NavItem icon={Settings} label="Settings" onClick={() => setIsSettingsOpen(true)} />
@@ -332,8 +336,7 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
           </DialogContent>
         </Dialog>
 
-        <NavItem icon={ShoppingBag} label="Marketplace" onClick={() => { }} />
-        <NavItem icon={Plus} label="New Page" onClick={() => handleCreatePage()} />
+
       </div>
     </aside>
   );
@@ -347,36 +350,48 @@ interface NavItemProps {
   badge?: string;
   count?: number;
   onClick: () => void;
+  onDelete?: () => void;
 }
 
-function NavItem({ icon: Icon, label, emoji, active, badge, count, onClick }: NavItemProps) {
+function NavItem({ icon: Icon, label, emoji, active, badge, count, onClick, onDelete }: NavItemProps) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors group",
-        active
-          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+    <div className={cn(
+      "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors group relative",
+      active
+        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+        : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+    )}>
+      <button
+        onClick={onClick}
+        className="flex-1 flex items-center gap-2 overflow-hidden"
+      >
+        {emoji ? (
+          <span className="w-5 text-center">{emoji}</span>
+        ) : (
+          <Icon className="w-4 h-4 text-muted-foreground" />
+        )}
+        <span className="flex-1 text-left truncate">{label}</span>
+        {badge && (
+          <span className="px-1.5 py-0.5 text-[10px] font-medium bg-info text-info-foreground rounded">
+            {badge}
+          </span>
+        )}
+        {count !== undefined && (
+          <span className="w-5 h-5 flex items-center justify-center text-xs bg-destructive text-destructive-foreground rounded-full">
+            {count}
+          </span>
+        )}
+      </button>
+      {onDelete && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
+          title="Delete page"
+        >
+          <Trash className="w-3 h-3" />
+        </button>
       )}
-    >
-      {emoji ? (
-        <span className="w-5 text-center">{emoji}</span>
-      ) : (
-        <Icon className="w-4 h-4 text-muted-foreground" />
-      )}
-      <span className="flex-1 text-left truncate">{label}</span>
-      {badge && (
-        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-info text-info-foreground rounded">
-          {badge}
-        </span>
-      )}
-      {count !== undefined && (
-        <span className="w-5 h-5 flex items-center justify-center text-xs bg-destructive text-destructive-foreground rounded-full">
-          {count}
-        </span>
-      )}
-    </button>
+    </div>
   );
 }
 
@@ -392,7 +407,7 @@ interface TeamSpaceItemProps {
 function TeamSpaceItem({ space, currentPage, onPageChange }: TeamSpaceItemProps) {
   const [open, setOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { createPage } = useWorkspaceMutations();
+  const { createPage, permanentlyDeletePage } = useWorkspaceMutations();
 
   const handleCreatePage = async () => {
     const newPage = await createPage.mutateAsync({ teamSpaceId: space.id });
@@ -441,6 +456,11 @@ function TeamSpaceItem({ space, currentPage, onPageChange }: TeamSpaceItemProps)
               emoji={page.icon}
               onClick={() => onPageChange(page.id)}
               active={currentPage === page.id}
+              onDelete={() => {
+                if (confirm("Delete this page?")) {
+                  permanentlyDeletePage.mutate(page.id)
+                }
+              }}
             />
           ))}
         </CollapsibleContent>
