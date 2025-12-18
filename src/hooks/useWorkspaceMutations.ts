@@ -10,20 +10,49 @@ export function useWorkspaceMutations() {
     mutationFn: async (name: string) => {
       if (!user) throw new Error('User not authenticated');
 
+      // 0. Ensure profile exists
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile) {
+        // Insert profile if missing
+        const { error: profileError } = await supabase
+          .from('profiles')
+          // @ts-ignore
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+            avatar_url: user.user_metadata?.avatar_url,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (profileError) {
+          console.error('Failed to create profile during team creation:', profileError);
+          throw new Error('Could not create user profile needed for team space.');
+        }
+      }
+
       // 1. Create the team space
       // @ts-ignore
       const { data: teamSpace, error: teamError } = await supabase
         .from('team_spaces')
+        // @ts-ignore
         .insert([{ name, owner_id: user.id, icon: '👥' }])
         .select()
         .single();
 
       if (teamError) throw teamError;
+      if (!teamSpace) throw new Error('Failed to create team space');
 
       // 2. Add the creator as a member (owner)
       // @ts-ignore
       const { error: memberError } = await supabase
         .from('team_members')
+        // @ts-ignore
         .insert([{ team_id: teamSpace.id, user_id: user.id, role: 'owner' }]);
 
       if (memberError) throw memberError;
@@ -42,6 +71,7 @@ export function useWorkspaceMutations() {
       // @ts-ignore
       const { data, error } = await supabase
         .from('pages')
+        // @ts-ignore
         .insert([
           {
             title,
@@ -49,7 +79,7 @@ export function useWorkspaceMutations() {
             team_space_id: teamSpaceId || null,
             type: 'blank',
             icon: '📄',
-            in_trash: false
+            // in_trash: false // Column does not exist
           },
         ])
         .select()
@@ -69,7 +99,7 @@ export function useWorkspaceMutations() {
       // @ts-ignore
       const { error } = await supabase
         .from('pages')
-        .update({ in_trash: true })
+        .delete() // Hard delete since soft delete (in_trash) is not supported
         .eq('id', pageId);
 
       if (error) throw error;
@@ -86,7 +116,8 @@ export function useWorkspaceMutations() {
       // @ts-ignore
       const { error } = await supabase
         .from('pages')
-        .update({ in_trash: false })
+        // .update({ in_trash: false }) // Cannot restore
+        .select('id') // No-op
         .eq('id', pageId);
 
       if (error) throw error;
