@@ -43,7 +43,7 @@ export function TableView({ rows, properties, pageId, databaseId }: TableViewPro
 
   const handleAddProperty = () => {
     if (!newPropName) return;
-    addProperty.mutate({ name: newPropName, type: newPropType });
+    addProperty.mutate({ name: newPropName, type: newPropType as any });
     setNewPropName("");
     setIsAddPropOpen(false);
   };
@@ -70,9 +70,9 @@ export function TableView({ rows, properties, pageId, databaseId }: TableViewPro
                     <span className="text-xs">#</span>
                     {prop.name}
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-6 w-6 opacity-0 group-hover:opacity-100"
                     onClick={() => deleteProperty.mutate(prop.id)}
                   >
@@ -162,33 +162,65 @@ function EditableCell({ value, type, onChange }: { value: any; type: string; onC
 
   if (isEditing) {
     if (type === 'status') {
-       return (
-         <Select value={localValue} onValueChange={(val) => { setLocalValue(val); onChange(val); setIsEditing(false); }}>
-            <SelectTrigger className="h-8 border-none shadow-none">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="not-started">Not Started</SelectItem>
-              <SelectItem value="in-progress">In Progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-            </SelectContent>
-         </Select>
-       );
+      return (
+        <Select value={localValue} onValueChange={(val) => { setLocalValue(val); onChange(val); setIsEditing(false); }}>
+          <SelectTrigger className="h-8 border-none shadow-none">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="not-started">Not Started</SelectItem>
+            <SelectItem value="in-progress">In Progress</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+      );
     }
     if (type === 'priority') {
-       return (
-         <Select value={localValue} onValueChange={(val) => { setLocalValue(val); onChange(val); setIsEditing(false); }}>
-            <SelectTrigger className="h-8 border-none shadow-none">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-            </SelectContent>
-         </Select>
-       );
+      return (
+        <Select value={localValue} onValueChange={(val) => { setLocalValue(val); onChange(val); setIsEditing(false); }}>
+          <SelectTrigger className="h-8 border-none shadow-none">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="low">Low</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+          </SelectContent>
+        </Select>
+      );
     }
+    if (type === 'date') {
+      return (
+        <Input
+          type="date"
+          className="h-8 border-none shadow-none focus-visible:ring-0"
+          value={localValue || ''}
+          onChange={(e) => {
+            const val = e.target.value;
+            setLocalValue(val);
+            onChange(val);
+            // Don't close immediately for date to allow selection? Actually date input blur handles it.
+          }}
+          onBlur={handleBlur}
+          autoFocus
+        />
+      );
+    }
+    // For 'person', we ideally need a list of users. For now, simple text fallback or mock select.
+    // Real implementation requires fetching workspace members.
+    if (type === 'person') {
+      return (
+        <Input
+          className="h-8 border-none shadow-none focus-visible:ring-0"
+          placeholder="@user..."
+          value={localValue || ''}
+          onChange={(e) => setLocalValue(e.target.value)}
+          onBlur={handleBlur}
+          autoFocus
+        />
+      );
+    }
+
     return (
       <Input
         className="h-8 border-none shadow-none focus-visible:ring-0"
@@ -201,7 +233,7 @@ function EditableCell({ value, type, onChange }: { value: any; type: string; onC
   }
 
   return (
-    <div 
+    <div
       className="min-h-[32px] flex items-center px-4 cursor-pointer hover:bg-muted/50"
       onClick={() => { setLocalValue(value); setIsEditing(true); }}
     >
@@ -212,7 +244,7 @@ function EditableCell({ value, type, onChange }: { value: any; type: string; onC
 
 function renderPropertyValue(value: any, type: string) {
   if (!value) return <span className="text-muted-foreground/30">-</span>;
-  
+
   switch (type) {
     case 'status':
       return <StatusBadge status={value} />;
@@ -220,6 +252,10 @@ function renderPropertyValue(value: any, type: string) {
       return <PriorityBadge priority={value} />;
     case 'progress':
       return <ProgressBar value={value} />;
+    case 'date':
+      return <span>{value ? new Date(value).toLocaleDateString() : '-'}</span>;
+    case 'person':
+      return <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">{String(value)}</span>;
     case 'text':
     default:
       return <span>{String(value)}</span>;

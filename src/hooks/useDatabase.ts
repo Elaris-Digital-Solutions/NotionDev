@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Page } from '@/types/workspace';
 
@@ -23,7 +24,7 @@ export function useDatabase(pageId: string) {
         .select('*')
         .eq('page_id', pageId)
         .single();
-      
+
       if (error && error.code !== 'PGRST116') throw error; // Ignore not found if it's just not initialized
       return data;
     },
@@ -40,7 +41,7 @@ export function useDatabase(pageId: string) {
         .select('*')
         .eq('database_id', database.id)
         .order('order');
-      
+
       if (error) throw error;
       return data as DatabaseProperty[];
     },
@@ -56,7 +57,7 @@ export function useDatabase(pageId: string) {
         .from('pages')
         .select('*')
         .eq('parent_database_id', database.id);
-      
+
       if (error) throw error;
 
       // For each page, fetch its property values
@@ -66,7 +67,7 @@ export function useDatabase(pageId: string) {
           .from('page_property_values')
           .select('*, database_properties(name)')
           .eq('page_id', page.id);
-        
+
         const propMap: Record<string, any> = {};
         props?.forEach((p: any) => {
           if (p.database_properties?.name) {
@@ -81,6 +82,46 @@ export function useDatabase(pageId: string) {
     },
     enabled: !!database?.id,
   });
+
+  // 4. Auto-create default columns if missing
+  const queryClient = import('@tanstack/react-query').then(m => m.useQueryClient());
+  // We need the queryClient instance, but we can't await import in body.
+  // Actually, let's just use the supabase client directly for the check, no need for mutations hook overhead here for simplicity.
+
+  // Actually, we can just use the queryClient from context if we move this logical check to a component or just fire-and-forget here.
+  // Better: DO NOT use useEffect for side effects that change DB if possible, but here it's necessary for "migration".
+  // A cleaner simple way:
+
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!database?.id || !properties || isLoading) return;
+
+    const defaults = [
+      { name: 'Status', type: 'status' },
+      { name: 'Priority', type: 'priority' },
+      { name: 'Due Date', type: 'date' },
+      { name: 'Responsible', type: 'person' }
+    ];
+
+    const missing = defaults.filter(d => !properties.find(p => p.name === d.name));
+
+    if (missing.length > 0) {
+      const createMissing = async () => {
+        for (const m of missing) {
+          await supabase.from('database_properties').insert({
+            database_id: database.id,
+            name: m.name,
+            type: m.type,
+            order: 99
+          });
+        }
+        qc.invalidateQueries({ queryKey: ['database_properties', database.id] });
+      };
+
+      createMissing();
+    }
+  }, [database?.id, properties?.length, isLoading]); // specific deps to avoid loop
 
   return {
     database,

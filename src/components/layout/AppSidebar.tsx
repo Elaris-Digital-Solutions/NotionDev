@@ -43,6 +43,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { ChangePasswordDialog } from "@/components/auth/ChangePasswordDialog";
+import { SearchModal } from "@/components/modals/SearchModal";
 
 interface SidebarProps {
   currentPage: string;
@@ -60,6 +61,7 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [newTeamSpaceName, setNewTeamSpaceName] = useState("");
 
   const { pages, teamSpaces, favorites, trash, isLoading } = useWorkspace();
@@ -120,8 +122,9 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
             <NavItem
               icon={Search}
               label="Search"
-              onClick={() => { }}
+              onClick={() => setIsSearchOpen(true)}
             />
+            <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
             <NavItem
               icon={Home}
               label="Home"
