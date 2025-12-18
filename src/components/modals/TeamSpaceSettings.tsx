@@ -27,16 +27,37 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['teamspace_members', teamSpace.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('teamspace_members')
-        .select('*, user:profiles(email)') // Assuming profiles table exists and is linked
-        .eq('team_space_id', teamSpace.id);
-      
+      // 1. Fetch relations safely
+      const { data: teamMembers, error } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', teamSpace.id);
+
       if (error) throw error;
-      // Fallback if profiles not set up, just show ID
-      return data.map((m: any) => ({
+
+      // 2. Fetch profiles safely if possible
+      const userIds = teamMembers.map((m: any) => m.user_id);
+      let profilesMap: Record<string, any> = {};
+
+      try {
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, email, full_name')
+            .in('id', userIds);
+
+          profiles?.forEach(p => { profilesMap[p.id] = p; });
+        }
+      } catch (err) {
+        console.warn("Could not fetch profiles", err);
+      }
+
+      // 3. Merge data
+      return teamMembers.map((m: any) => ({
         ...m,
-        user: m.user || { email: 'Unknown User' }
+        id: m.team_id + m.user_id, // Composite key fallback
+        role: m.role,
+        user: profilesMap[m.user_id] || { email: `User ${m.user_id.slice(0, 4)}...` }
       })) as TeamSpaceMember[];
     },
     enabled: open
@@ -50,14 +71,14 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
         .select('id')
         .eq('email', inviteEmail)
         .single();
-      
+
       if (profileError || !profiles) throw new Error("User not found");
 
-      // 2. Add to teamspace
+      // 2. Add to team_members
       const { error } = await supabase
-        .from('teamspace_members')
+        .from('team_members')
         .insert({
-          team_space_id: teamSpace.id,
+          team_id: teamSpace.id,
           user_id: profiles.id,
           role: inviteRole
         });
@@ -75,9 +96,10 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
   const updateRole = useMutation({
     mutationFn: async ({ memberId, role }: { memberId: string, role: string }) => {
       const { error } = await supabase
-        .from('teamspace_members')
+        .from('team_members')
         .update({ role })
-        .eq('id', memberId);
+        .eq('team_id', teamSpace.id) // Composite key update needed usually, but using what we have
+        .eq('user_id', memberId); // memberId passed in mutation invocation needs to be user_id actually
       if (error) throw error;
     },
     onSuccess: () => {
@@ -89,9 +111,10 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
   const removeMember = useMutation({
     mutationFn: async (memberId: string) => {
       const { error } = await supabase
-        .from('teamspace_members')
+        .from('team_members')
         .delete()
-        .eq('id', memberId);
+        .eq('team_id', teamSpace.id)
+        .eq('user_id', memberId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -117,8 +140,8 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
             <div className="flex items-end gap-2 p-4 bg-muted/50 rounded-lg">
               <div className="flex-1 space-y-2">
                 <Label>Invite by Email</Label>
-                <Input 
-                  placeholder="colleague@example.com" 
+                <Input
+                  placeholder="colleague@example.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                 />
@@ -156,12 +179,12 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
                       <div className="text-xs text-muted-foreground capitalize">{member.role}</div>
                     </div>
                   </div>
-                  
+
                   {isOwner && member.role !== 'owner' && (
                     <div className="flex items-center gap-2">
-                      <Select 
-                        value={member.role} 
-                        onValueChange={(val) => updateRole.mutate({ memberId: member.id, role: val })}
+                      <Select
+                        value={member.role}
+                        onValueChange={(val) => updateRole.mutate({ memberId: member.user_id, role: val })}
                       >
                         <SelectTrigger className="w-24 h-8"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -169,11 +192,11 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
                           <SelectItem value="viewer">Viewer</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => removeMember.mutate(member.id)}
+                        onClick={() => removeMember.mutate(member.user_id)}
                       >
                         <Trash className="w-4 h-4" />
                       </Button>

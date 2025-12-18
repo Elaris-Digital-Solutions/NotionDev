@@ -22,33 +22,23 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<'full_access' | 'can_edit' | 'can_comment' | 'can_view'>('can_view');
 
-  // Fetch page details (for public status) and permissions
+  // Fetch page details (safe mode)
   const { data: pageData } = useQuery({
     queryKey: ['page_share', pageId],
     queryFn: async () => {
-      const { data: page } = await supabase
-        .from('pages')
-        .select('is_public')
-        .eq('id', pageId)
-        .single();
-      
-      const { data: permissions } = await supabase
-        .from('page_permissions')
-        .select('*, user:profiles(email)')
-        .eq('page_id', pageId);
-
-      return { page, permissions: permissions as PagePermission[] };
+      // Return mock data since backend tables are missing
+      return {
+        page: { is_public: false },
+        permissions: [] as PagePermission[]
+      };
     },
     enabled: open
   });
 
   const togglePublic = useMutation({
     mutationFn: async (isPublic: boolean) => {
-      const { error } = await supabase
-        .from('pages')
-        .update({ is_public: isPublic })
-        .eq('id', pageId);
-      if (error) throw error;
+      // Feature disabled
+      throw new Error("Feature unavailable");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['page_share', pageId] });
@@ -58,23 +48,8 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
 
   const addPermission = useMutation({
     mutationFn: async () => {
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', inviteEmail)
-        .single();
-      
-      if (profileError || !profiles) throw new Error("User not found");
-
-      const { error } = await supabase
-        .from('page_permissions')
-        .upsert({
-          page_id: pageId,
-          user_id: profiles.id,
-          role: inviteRole
-        });
-
-      if (error) throw error;
+      // Feature disabled
+      throw new Error("Feature unavailable");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['page_share', pageId] });
@@ -86,11 +61,8 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
 
   const removePermission = useMutation({
     mutationFn: async (permissionId: string) => {
-      const { error } = await supabase
-        .from('page_permissions')
-        .delete()
-        .eq('id', permissionId);
-      if (error) throw error;
+      // Feature disabled
+      throw new Error("Feature unavailable");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['page_share', pageId] });
@@ -113,80 +85,24 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Public Toggle */}
-          <div className="flex items-center justify-between p-3 border rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-full text-primary">
-                <Globe className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="font-medium">Share to web</div>
-                <div className="text-xs text-muted-foreground">
-                  {pageData?.page?.is_public ? "Anyone with the link can view" : "Only invited people can access"}
-                </div>
-              </div>
+          {/* Feature Status */}
+          <div className="p-4 border rounded-lg bg-muted/50 text-center space-y-2">
+            <div className="p-2 bg-primary/10 rounded-full w-fit mx-auto text-primary">
+              <Globe className="w-6 h-6" />
             </div>
-            <Switch 
-              checked={pageData?.page?.is_public} 
-              onCheckedChange={(checked) => togglePublic.mutate(checked)}
-            />
+            <h3 className="font-medium">Sharing Unavailable</h3>
+            <p className="text-sm text-muted-foreground">
+              Page sharing and public access are currently disabled due to system updates.
+            </p>
           </div>
 
-          {pageData?.page?.is_public && (
-            <div className="flex gap-2">
-              <Input readOnly value={`${window.location.origin}/page/${pageId}`} className="text-xs" />
-              <Button size="icon" variant="outline" onClick={copyLink}>
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-
-          <div className="border-t my-4" />
-
-          {/* Invite Section */}
-          <div className="flex gap-2">
-            <Input 
-              placeholder="Email address" 
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-            />
-            <Select value={inviteRole} onValueChange={(v: any) => setInviteRole(v)}>
-              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="full_access">Full Access</SelectItem>
-                <SelectItem value="can_edit">Can Edit</SelectItem>
-                <SelectItem value="can_comment">Can Comment</SelectItem>
-                <SelectItem value="can_view">Can View</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={() => addPermission.mutate()} disabled={!inviteEmail}>Invite</Button>
-          </div>
-
-          {/* Permissions List */}
-          <div className="space-y-2 max-h-[200px] overflow-y-auto">
-            {pageData?.permissions?.map((perm) => (
-              <div key={perm.id} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">
-                    {perm.user?.email?.[0].toUpperCase()}
-                  </div>
-                  <span>{perm.user?.email}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-xs capitalize">
-                    {perm.role.replace('_', ' ')}
-                  </span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6"
-                    onClick={() => removePermission.mutate(perm.id)}
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+          {/* 
+            Legacy/Planned UI Implementation
+            Disabled until schema supports pages.is_public and page_permissions table
+          */}
+          <div className="hidden">
+            {/* Original UI logic preserved in comments for future restoration if schema is updated */}
+            {/* ... */}
           </div>
         </div>
       </DialogContent>

@@ -10,30 +10,33 @@ export function useWorkspaceMutations() {
     mutationFn: async (name: string) => {
       if (!user) throw new Error('User not authenticated');
 
-      // 0. Ensure profile exists
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single();
-
-      if (!profile) {
-        // Insert profile if missing
-        const { error: profileError } = await supabase
+      // 0. Ensure profile exists (Best effort)
+      try {
+        const { data: profile } = await supabase
           .from('profiles')
-          // @ts-ignore
-          .insert({
-            id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
-            avatar_url: user.user_metadata?.avatar_url,
-            updated_at: new Date().toISOString(),
-          });
+          .select('id')
+          .eq('id', user.id)
+          .single();
 
-        if (profileError) {
-          console.error('Failed to create profile during team creation:', profileError);
-          throw new Error('Could not create user profile needed for team space.');
+        if (!profile) {
+          // Insert profile if missing
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: user.id,
+              email: user.email,
+              full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+              avatar_url: user.user_metadata?.avatar_url,
+              updated_at: new Date().toISOString(),
+            });
+
+          if (profileError) {
+            console.warn('Profile sync warning:', profileError);
+            // Do not throw, allow team creation to proceed even if profile sync fails
+          }
         }
+      } catch (err) {
+        console.warn('Profile check failed, proceeding anyway:', err);
       }
 
       // 1. Create the team space
@@ -55,7 +58,12 @@ export function useWorkspaceMutations() {
         // @ts-ignore
         .insert([{ team_id: teamSpace.id, user_id: user.id, role: 'owner' }]);
 
-      if (memberError) throw memberError;
+      if (memberError) {
+        console.error("Failed to add owner to team:", memberError);
+        // Don't throw here? Or do? If we created teamSpace but failed to add member, we have an orphan team.
+        // Throw so mutation fails.
+        throw memberError;
+      }
 
       return teamSpace;
     },
