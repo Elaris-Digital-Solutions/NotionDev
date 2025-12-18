@@ -81,6 +81,23 @@ export function PageView({ pageId }: PageViewProps) {
   });
 
 
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 overflow-y-auto bg-background animate-fade-up p-12">
+        <Skeleton className="h-48 w-full mb-8 rounded-lg" />
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-1/2" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!page) return <div className="flex-1 flex items-center justify-center text-muted-foreground">Page not found</div>;
+
   return (
     <div className="flex-1 overflow-y-auto bg-background animate-fade-up">
       <div className="h-48 bg-gradient-to-r from-pink-100 to-blue-100 w-full group relative">

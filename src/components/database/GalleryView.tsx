@@ -24,7 +24,7 @@ export function GalleryView({ rows, properties, pageId }: GalleryViewProps) {
                 {row?.cover_image ? (
                   <img src={row.cover_image} alt="Cover" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-4xl">{row.icon || '📄'}</span>
+                  <span className="text-4xl">{row?.icon || '📄'}</span>
                 )}
               </div>
               <CardContent className="p-4 space-y-3">

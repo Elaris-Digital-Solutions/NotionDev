@@ -132,7 +132,7 @@ export function TableView({ rows, properties, pageId, databaseId, members = [] }
             <TableRow key={row.id} className="border-border group">
               <TableCell className="font-medium">
                 <Link to={`/page/${row.id}`} className="flex items-center gap-2 hover:underline">
-                  {row.icon || '📄'} {row.title}
+                  {row?.icon || '📄'} {row?.title}
                 </Link>
               </TableCell>
               {properties.map(prop => (
