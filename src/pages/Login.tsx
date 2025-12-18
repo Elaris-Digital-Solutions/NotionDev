@@ -18,7 +18,7 @@ export default function Login() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       if (useMagicLink) {
         const { error } = await supabase.auth.signInWithOtp({
@@ -28,12 +28,12 @@ export default function Login() {
           },
         });
         if (error) throw error;
-        toast({ 
-          title: "Check your email", 
-          description: "We sent you a magic link to sign in." 
+        toast({
+          title: "Check your email",
+          description: "We sent you a magic link to sign in."
         });
       } else if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -43,14 +43,19 @@ export default function Login() {
           },
         });
         if (error) throw error;
-        toast({ title: "Success", description: "Please check your email to confirm your account." });
+
+        // If email confirmation is enabled, session will be null.
+        // If disabled (auto-confirm), session will be present.
+        if (!data.session) {
+          toast({ title: "Success", description: "Please check your email to confirm your account." });
+        }
+        // If session exists, AuthLayout will automatically redirect.
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        // Navigation is handled by AuthProvider state change
       }
     } catch (error: any) {
       toast({
@@ -71,8 +76,8 @@ export default function Login() {
             {isSignUp ? "Create an account" : (useMagicLink ? "Sign in with Magic Link" : "Welcome Back")}
           </CardTitle>
           <CardDescription className="text-center">
-            {isSignUp 
-              ? "Enter your details to get started" 
+            {isSignUp
+              ? "Enter your details to get started"
               : (useMagicLink ? "We'll send a link to your email" : "Enter your credentials to access your account")}
           </CardDescription>
         </CardHeader>
@@ -101,7 +106,7 @@ export default function Login() {
                 required
               />
             </div>
-            
+
             {!useMagicLink && (
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
@@ -122,7 +127,7 @@ export default function Login() {
               )}
             </Button>
           </form>
-          
+
           <div className="mt-6 flex flex-col gap-2 text-center text-sm">
             {!isSignUp && (
               <Button

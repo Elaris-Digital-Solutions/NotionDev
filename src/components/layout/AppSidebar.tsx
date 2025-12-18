@@ -42,6 +42,7 @@ import {
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { ChangePasswordDialog } from "@/components/auth/ChangePasswordDialog";
 
 interface SidebarProps {
   currentPage: string;
@@ -54,9 +55,10 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
   const [teamspacesOpen, setTeamspacesOpen] = useState(true);
   const [privateOpen, setPrivateOpen] = useState(true);
   const [templatesOpen, setTemplatesOpen] = useState(true);
-  
+
   const [isTeamSpaceDialogOpen, setIsTeamSpaceDialogOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [newTeamSpaceName, setNewTeamSpaceName] = useState("");
 
@@ -113,28 +115,28 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
         <div className="p-2">
           {/* Main Navigation */}
           <nav className="space-y-0.5">
-            <NavItem 
-              icon={Search} 
-              label="Search" 
-              onClick={() => {}} 
+            <NavItem
+              icon={Search}
+              label="Search"
+              onClick={() => { }}
             />
-            <NavItem 
-              icon={Home} 
-              label="Home" 
+            <NavItem
+              icon={Home}
+              label="Home"
               active={currentPage === 'home'}
-              onClick={() => onPageChange('home')} 
+              onClick={() => onPageChange('home')}
             />
-            <NavItem 
-              icon={Calendar} 
-              label="Meetings" 
-              onClick={() => onPageChange('meetings')} 
+            <NavItem
+              icon={Calendar}
+              label="Meetings"
+              onClick={() => onPageChange('meetings')}
               active={currentPage === 'meetings'}
             />
-            <NavItem 
-              icon={Inbox} 
-              label="Inbox" 
+            <NavItem
+              icon={Inbox}
+              label="Inbox"
               count={unreadCount > 0 ? unreadCount : undefined}
-              onClick={() => onPageChange('inbox')} 
+              onClick={() => onPageChange('inbox')}
               active={currentPage === 'inbox'}
             />
           </nav>
@@ -216,7 +218,7 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
                 <ChevronRight className={cn("w-3 h-3 transition-transform", privateOpen && "rotate-90")} />
                 Private
               </CollapsibleTrigger>
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleCreatePage();
@@ -277,20 +279,28 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
                 {/* Switch would go here */}
                 <div className="text-xs text-muted-foreground">System</div>
               </div>
-              <div className="flex items-center justify-between py-2 border-b">
-                <div className="space-y-0.5">
+              <div className="flex items-center justify-center py-2 border-b">
+                <div className="space-y-0.5 flex-1">
                   <Label>Notifications</Label>
                   <p className="text-xs text-muted-foreground">Manage email notifications</p>
                 </div>
                 <div className="text-xs text-muted-foreground">Enabled</div>
               </div>
+
+
+
+
             </div>
             <DialogFooter>
               <Button onClick={() => setIsSettingsOpen(false)}>Done</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        
+
+
+
+
+
         <Dialog open={isTrashOpen} onOpenChange={setIsTrashOpen}>
           <DialogTrigger asChild>
             <NavItem icon={Trash} label="Trash" onClick={() => setIsTrashOpen(true)} />
@@ -322,7 +332,7 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
           </DialogContent>
         </Dialog>
 
-        <NavItem icon={ShoppingBag} label="Marketplace" onClick={() => {}} />
+        <NavItem icon={ShoppingBag} label="Marketplace" onClick={() => { }} />
         <NavItem icon={Plus} label="New Page" onClick={() => handleCreatePage()} />
       </div>
     </aside>
@@ -345,8 +355,8 @@ function NavItem({ icon: Icon, label, emoji, active, badge, count, onClick }: Na
       onClick={onClick}
       className={cn(
         "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors group",
-        active 
-          ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+        active
+          ? "bg-sidebar-accent text-sidebar-accent-foreground"
           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
       )}
     >
@@ -402,7 +412,7 @@ function TeamSpaceItem({ space, currentPage, onPageChange }: TeamSpaceItemProps)
             <span className="flex-1 text-left truncate font-medium">{space.name}</span>
           </CollapsibleTrigger>
           <div className="flex items-center opacity-0 group-hover/item:opacity-100 transition-opacity">
-            <button 
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 setSettingsOpen(true);
@@ -411,7 +421,7 @@ function TeamSpaceItem({ space, currentPage, onPageChange }: TeamSpaceItemProps)
             >
               <MoreHorizontal className="w-3 h-3" />
             </button>
-            <button 
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleCreatePage();
@@ -435,10 +445,10 @@ function TeamSpaceItem({ space, currentPage, onPageChange }: TeamSpaceItemProps)
           ))}
         </CollapsibleContent>
       </Collapsible>
-      <TeamSpaceSettings 
-        teamSpace={space} 
-        open={settingsOpen} 
-        onOpenChange={setSettingsOpen} 
+      <TeamSpaceSettings
+        teamSpace={space}
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
       />
     </>
   );
