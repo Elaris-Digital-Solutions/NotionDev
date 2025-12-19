@@ -161,9 +161,9 @@ export function PageView({ pageId }: PageViewProps) {
                 order: afterBlock ? (afterBlock.order || 0) + 1 : 0
               });
             }}
-            onUpdateBlock={(id, content) => updateBlock.mutate({ blockId: id, updates: { content } })}
+            onUpdateBlock={(id, content, plainText, version) => updateBlock.mutate({ blockId: id, content, plainText, version })}
             onDeleteBlock={(id) => deleteBlock.mutate(id)}
-            onMoveBlock={(id, direction) => moveBlock.mutate({ blockId: id, direction })}
+          // onMoveBlock={(id, direction) => moveBlock.mutate({ blockId: id, direction })} // Temporarily disabled for virtualization refactor compatibility if needed, or keeping if it works with virtual list (it should)
           />
         </div>
       </div>

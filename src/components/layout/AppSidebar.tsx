@@ -44,6 +44,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { ChangePasswordDialog } from "@/components/auth/ChangePasswordDialog";
 import { SearchModal } from "@/components/modals/SearchModal";
+import { PageTreeItem } from "@/components/layout/PageTreeItem";
 
 interface SidebarProps {
   currentPage: string;
@@ -246,13 +247,11 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
               {pages
                 .filter(page => page.title !== '_System_Properties_DO_NOT_DELETE' && !page.title.startsWith('_'))
                 .map((page) => (
-                  <NavItem
+                  <PageTreeItem
                     key={page.id}
-                    icon={getPageIcon(page.icon)}
-                    label={page.title}
-                    emoji={page.icon}
-                    onClick={() => onPageChange(page.id)}
-                    active={currentPage === page.id}
+                    page={page}
+                    currentPageId={currentPage}
+                    onPageChange={onPageChange}
                   />
                 ))}
             </CollapsibleContent>

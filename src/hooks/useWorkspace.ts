@@ -2,12 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Page } from '@/types/workspace';
+import { queryKeys } from '@/lib/queryKeys';
 
 export function useWorkspace() {
   const { user } = useAuth();
 
   const { data: pages, isLoading: pagesLoading } = useQuery({
-    queryKey: ['pages', user?.id],
+    queryKey: queryKeys.sidebar.root(user?.id),
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
@@ -15,21 +16,22 @@ export function useWorkspace() {
         .select('*')
         .eq('owner_id', user.id)
         .is('team_space_id', null) // Private pages
+        .is('parent_id', null) // Only Root Pages
         .order('created_at', { ascending: true });
 
       if (error) throw error;
       return data as Page[];
     },
     enabled: !!user,
+    placeholderData: (previousData) => previousData, // Avoid white screen on refetch
   });
 
   const { data: teamSpaces, isLoading: teamsLoading } = useQuery({
-    queryKey: ['teamSpaces', user?.id],
+    queryKey: queryKeys.sidebar.teamSpaces(user?.id),
     queryFn: async () => {
       if (!user) return [];
 
       try {
-        // Fetch teams where user is a member
         const { data: members, error: memberError } = await supabase
           .from('team_members')
           .select('team_id')
@@ -65,11 +67,12 @@ export function useWorkspace() {
       }
     },
     enabled: !!user,
-    retry: false, // Don't retry if schema is broken
+    retry: false,
+    placeholderData: (previousData) => previousData,
   });
 
   const { data: favorites, isLoading: favoritesLoading } = useQuery({
-    queryKey: ['favorites', user?.id],
+    queryKey: queryKeys.sidebar.favorites(user?.id),
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
@@ -82,24 +85,24 @@ export function useWorkspace() {
       return data as Page[];
     },
     enabled: !!user,
+    placeholderData: (previousData) => previousData,
   });
 
   const { data: trash, isLoading: trashLoading } = useQuery({
-    queryKey: ['trash', user?.id],
+    queryKey: queryKeys.sidebar.trash(user?.id),
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
         .from('pages')
         .select('*')
         .eq('owner_id', user.id)
-        // .eq('in_trash', true) // Column doesn't exist
-        .limit(0); // Effectively return nothing for now as trash isn't supported
-
+        .limit(0);
 
       if (error) throw error;
       return data as Page[];
     },
     enabled: !!user,
+    placeholderData: (previousData) => previousData,
   });
 
   return {
@@ -107,6 +110,6 @@ export function useWorkspace() {
     teamSpaces: teamSpaces || [],
     favorites: favorites || [],
     trash: trash || [],
-    isLoading: pagesLoading || teamsLoading || favoritesLoading || trashLoading,
+    isLoading: (pagesLoading || teamsLoading) && !pages && !teamSpaces,
   };
 }

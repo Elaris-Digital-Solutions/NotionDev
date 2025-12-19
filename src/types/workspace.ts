@@ -90,7 +90,9 @@ export type BlockType = 'text' | 'h1' | 'h2' | 'h3' | 'bullet-list' | 'numbered-
 export interface Block {
   id: string;
   type: string;
-  content: string | null;
+  content: any; // Changed from string | null to support Tiptap JSON
+  plain_text?: string;
+  version: number;
   properties: any;
   order: number;
   parent_block_id: string | null;

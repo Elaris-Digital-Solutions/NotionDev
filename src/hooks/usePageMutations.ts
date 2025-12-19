@@ -1,15 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Block, Page } from '@/types/workspace';
+import { queryKeys } from '@/lib/queryKeys';
 
 export function usePageMutations(pageId: string) {
   const queryClient = useQueryClient();
 
   const updatePage = useMutation({
     mutationFn: async (updates: Partial<Page>) => {
-      // Remove fields that are not in the database table
       const { blocks, ...pageUpdates } = updates;
-      
       const { data, error } = await supabase
         .from('pages')
         .update(pageUpdates)
@@ -21,35 +20,62 @@ export function usePageMutations(pageId: string) {
       return data;
     },
     onSuccess: (updatedPage) => {
-      queryClient.setQueryData(['page', pageId], updatedPage);
-      // Also invalidate workspace to update sidebar titles if needed
-      queryClient.invalidateQueries({ queryKey: ['workspace'] });
+      queryClient.setQueryData(queryKeys.pages.detail(pageId), updatedPage);
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspace() });
     },
   });
 
   const updateBlock = useMutation({
-    mutationFn: async ({ blockId, updates }: { blockId: string; updates: Partial<Block> }) => {
-      // Separate properties that go into the 'properties' JSONB column vs top-level columns
-      // For now, we assume 'updates' matches the DB schema or we handle it here.
-      // The Block interface has 'content', 'type', 'properties' (JSONB).
-      const { children, ...blockUpdates } = updates;
-      
-      const { data, error } = await supabase
-        .from('blocks')
-        .update(blockUpdates)
-        .eq('id', blockId)
-        .select()
-        .single();
+    onMutate: async (newBlockVars) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.blocks.all(pageId) });
+      const previousBlocks = queryClient.getQueryData<Block[]>(queryKeys.blocks.all(pageId));
 
-      if (error) throw error;
+      queryClient.setQueryData(queryKeys.blocks.all(pageId), (old: Block[] | undefined) => {
+        if (!old) return [];
+        return old.map((b) => {
+          if (b.id === newBlockVars.blockId) {
+            return {
+              ...b,
+              ...newBlockVars.updates,
+              ...(newBlockVars.content !== undefined ? { content: newBlockVars.content } : {}),
+              ...(newBlockVars.version !== undefined ? { version: (b.version || 0) + 1 } : {})
+            };
+          }
+          return b;
+        });
+      });
+
+      return { previousBlocks };
+    },
+    mutationFn: async ({ blockId, content, plainText, version, updates }: { blockId: string; content?: any; plainText?: string; version?: number; updates?: Partial<Block> }) => {
+      let query = supabase.from('blocks').update({
+        ...updates,
+        ...(content !== undefined ? { content } : {}),
+        ...(plainText !== undefined ? { plain_text: plainText } : {}),
+        ...(version !== undefined ? { version: version + 1 } : {})
+      })
+        .eq('id', blockId);
+
+      if (version !== undefined) {
+        query = query.eq('version', version);
+      }
+
+      const { data, error } = await query.select().single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          throw new Error("Conflict: Block has been modified by another user. Reloading...");
+        }
+        throw error;
+      }
       return data;
     },
-    onSuccess: (updatedBlock) => {
-      queryClient.setQueryData(['blocks', pageId], (old: Block[] | undefined) => {
-        if (!old) return [updatedBlock];
-        return old.map((b) => (b.id === updatedBlock.id ? updatedBlock : b));
-      });
-    },
+    onError: (err, newBlock, context) => {
+      queryClient.setQueryData(queryKeys.blocks.all(pageId), context?.previousBlocks);
+      if (err.message.includes('Conflict')) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.blocks.all(pageId) });
+      }
+    }
   });
 
   const createBlock = useMutation({
@@ -57,15 +83,14 @@ export function usePageMutations(pageId: string) {
       const { children, ...blockData } = block;
       const { data, error } = await supabase
         .from('blocks')
-        .insert([{ ...blockData, page_id: pageId } as any]) // Cast to any to avoid strict type checking on insert
+        .insert([{ ...blockData, page_id: pageId } as any])
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
     onSuccess: (newBlock) => {
-      queryClient.setQueryData(['blocks', pageId], (old: Block[] | undefined) => {
+      queryClient.setQueryData(queryKeys.blocks.all(pageId), (old: Block[] | undefined) => {
         if (!old) return [newBlock];
         return [...old, newBlock];
       });
@@ -73,44 +98,39 @@ export function usePageMutations(pageId: string) {
   });
 
   const deleteBlock = useMutation({
-    mutationFn: async (blockId: string) => {
-      const { error } = await supabase
-        .from('blocks')
-        .delete()
-        .eq('id', blockId);
+    onMutate: async (blockId) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.blocks.all(pageId) });
+      const previousBlocks = queryClient.getQueryData(queryKeys.blocks.all(pageId));
 
-      if (error) throw error;
-      return blockId;
-    },
-    onSuccess: (deletedId) => {
-      queryClient.setQueryData(['blocks', pageId], (old: Block[] | undefined) => {
+      queryClient.setQueryData(queryKeys.blocks.all(pageId), (old: Block[] | undefined) => {
         if (!old) return [];
-        return old.filter((b) => b.id !== deletedId);
+        return old.filter((b) => b.id !== blockId);
       });
+
+      return { previousBlocks };
     },
+    mutationFn: async (blockId: string) => {
+      const { error } = await supabase.from('blocks').delete().eq('id', blockId);
+      if (error) throw error;
+    },
+    onError: (err, blockId, context) => {
+      queryClient.setQueryData(queryKeys.blocks.all(pageId), context?.previousBlocks);
+    }
   });
 
   const createChildPage = useMutation({
     mutationFn: async (title: string = 'Untitled') => {
       const { data, error } = await supabase
         .from('pages')
-        .insert([
-          { 
-            title, 
-            parent_id: pageId,
-            type: 'page',
-            icon: '📄'
-          }
-        ])
+        .insert([{ title, parent_id: pageId, type: 'page', icon: '📄' }])
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['database', pageId] });
-      queryClient.invalidateQueries({ queryKey: ['workspace'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sidebar.children(pageId) });
+      // Invalidate open nodes in sidebar? Ideally we updated local cache if we had parent node context
     },
   });
 
@@ -118,51 +138,66 @@ export function usePageMutations(pageId: string) {
     mutationFn: async ({ pageId: targetPageId, propertyId, value }: { pageId: string; propertyId: string; value: any }) => {
       const { data, error } = await supabase
         .from('page_property_values')
-        .upsert(
-          { page_id: targetPageId, property_id: propertyId, value },
-          { onConflict: 'page_id, property_id' }
-        )
+        .upsert({ page_id: targetPageId, property_id: propertyId, value }, { onConflict: 'page_id, property_id' })
         .select();
-
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['database_rows'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.database.rows(pageId) }); // Approximate
+      queryClient.invalidateQueries({ queryKey: queryKeys.all }); // Fallback
     },
   });
 
   const moveBlock = useMutation({
+    onMutate: async ({ blockId, direction }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.blocks.all(pageId) });
+      const previousBlocks = queryClient.getQueryData<Block[]>(queryKeys.blocks.all(pageId));
+
+      if (previousBlocks) {
+        const sorted = [...previousBlocks].sort((a, b) => a.order - b.order);
+        const index = sorted.findIndex(b => b.id === blockId);
+        if (index !== -1) {
+          const targetIndex = direction === 'up' ? index - 1 : index + 1;
+          if (targetIndex >= 0 && targetIndex < sorted.length) {
+            const newBlocks = [...sorted];
+            const tempOrder = newBlocks[index].order;
+            newBlocks[index] = { ...newBlocks[index], order: newBlocks[targetIndex].order };
+            newBlocks[targetIndex] = { ...newBlocks[targetIndex], order: tempOrder };
+            newBlocks.sort((a, b) => a.order - b.order);
+            queryClient.setQueryData(queryKeys.blocks.all(pageId), newBlocks);
+          }
+        }
+      }
+      return { previousBlocks };
+    },
     mutationFn: async ({ blockId, direction }: { blockId: string; direction: 'up' | 'down' }) => {
-      // Get current blocks
-      const blocks = queryClient.getQueryData<Block[]>(['blocks', pageId]) || [];
-      // Sort blocks by order to ensure correct index
-      const sortedBlocks = [...blocks].sort((a, b) => a.order - b.order);
-      
-      const index = sortedBlocks.findIndex(b => b.id === blockId);
+      const { data: blocks } = await supabase
+        .from('blocks')
+        .select('*')
+        .eq('page_id', pageId)
+        .order('order', { ascending: true });
+
+      if (!blocks) throw new Error("Could not fetch blocks");
+
+      const index = blocks.findIndex(b => b.id === blockId);
       if (index === -1) return;
-      
+
       const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= sortedBlocks.length) return;
-      
-      const currentBlock = sortedBlocks[index];
-      const targetBlock = sortedBlocks[targetIndex];
-      
-      // Swap orders
-      const { error: error1 } = await supabase
-        .from('blocks')
-        .update({ order: targetBlock.order })
-        .eq('id', currentBlock.id);
-        
-      const { error: error2 } = await supabase
-        .from('blocks')
-        .update({ order: currentBlock.order })
-        .eq('id', targetBlock.id);
-        
+      if (targetIndex < 0 || targetIndex >= blocks.length) return;
+
+      const currentBlock = blocks[index];
+      const targetBlock = blocks[targetIndex];
+
+      const { error: error1 } = await supabase.from('blocks').update({ order: targetBlock.order }).eq('id', currentBlock.id);
+      const { error: error2 } = await supabase.from('blocks').update({ order: currentBlock.order }).eq('id', targetBlock.id);
       if (error1 || error2) throw error1 || error2;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['blocks', pageId] });
+    onError: (err, newBlock, context) => {
+      queryClient.setQueryData(queryKeys.blocks.all(pageId), context?.previousBlocks);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.blocks.all(pageId) });
     }
   });
 

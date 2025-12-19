@@ -121,7 +121,9 @@ export interface Database {
           id: string
           page_id: string
           type: string
-          content: string | null
+          content: Json | null // Changed to Json
+          plain_text: string | null // Added
+          version: number // Added
           properties: Json
           order: number
           parent_block_id: string | null
@@ -132,7 +134,9 @@ export interface Database {
           id?: string
           page_id: string
           type: string
-          content?: string | null
+          content?: Json | null // Changed to Json
+          plain_text?: string | null // Added
+          version?: number // Added
           properties?: Json
           order: number
           parent_block_id?: string | null
@@ -143,7 +147,9 @@ export interface Database {
           id?: string
           page_id?: string
           type?: string
-          content?: string | null
+          content?: Json | null // Changed to Json
+          plain_text?: string | null // Added
+          version?: number // Added
           properties?: Json
           order?: number
           parent_block_id?: string | null
