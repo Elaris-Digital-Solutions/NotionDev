@@ -23,12 +23,7 @@ export function useComments(pageId: string) {
         queryKey: ['comments', pageId],
         queryFn: async () => {
             const { data, error } = await (supabase.from('comments') as any)
-                .select(`
-          *,
-          user:user_id (
-            email
-          )
-        `) // Assuming we can join on auth.users or we have profiles. 
+                .select('*')
                 // If profiles table exists and user_id is FK to it (or just same ID), we join profiles.
                 // Our previous setup had 'profiles'.
                 .eq('page_id', pageId)

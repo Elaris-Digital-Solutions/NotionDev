@@ -16,10 +16,8 @@ export function useDatabaseMutations(databaseId?: string) {
       const { error } = await (supabase
         .from('database_properties') as any)
         .insert({
-          database_id: databaseId,
           name: column.name,
           type: column.type,
-          options: column.options,
           config: column.config || { options: [] }, // Default config
           position: column.position // Use passed position
         });
