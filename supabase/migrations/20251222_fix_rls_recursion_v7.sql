@@ -1,5 +1,6 @@
 -- Migration: 20251222_fix_rls_recursion_v7.sql
 -- Purpose: Fix RLS for database_properties and ensure databases access is correctly checked.
+-- UPDATED: Added DROP statements for idempotency.
 
 -- 1. Create Helper to check Database Access via Page Access
 create or replace function public.has_database_access_secure(_database_id uuid)
@@ -22,15 +23,13 @@ $$;
 
 -- 2. Fix Database Properties Policy
 drop policy if exists "Properties viewable if page viewable" on public.database_properties;
+drop policy if exists "Properties insertable if page editable" on public.database_properties;
+drop policy if exists "Properties updatable if page editable" on public.database_properties;
+drop policy if exists "Properties deletable if page editable" on public.database_properties;
 
 create policy "Properties viewable if page viewable" 
   on public.database_properties for select 
   using (public.has_database_access_secure(database_id));
-
--- Allow Insert/Update/Delete for Page Owners/Editors (Simplified to Check Access for now, usually needs stronger check)
--- For now, let's limit modification to those who can UPDATE the database page.
--- We can reuse has_database_access_secure or make a stricter one.
--- Let's assume 'edit' access to page = ability to modify schema for now.
 
 create policy "Properties insertable if page editable" 
   on public.database_properties for insert 
@@ -45,9 +44,14 @@ create policy "Properties deletable if page editable"
   using (public.has_database_access_secure(database_id));
 
 
--- 3. Fix Page Property Values Policy (Ensure it exists and covers modification)
+-- 3. Fix Page Property Values Policy
 drop policy if exists "Values viewable if page viewable" on public.page_property_values;
-drop policy if exists "Values modifiable if page editable" on public.page_property_values;
+-- Drop old names if they exist
+drop policy if exists "Values modifiable if page editable" on public.page_property_values; 
+-- Drop new names to be safe
+drop policy if exists "Values insertable if page editable" on public.page_property_values;
+drop policy if exists "Values updatable if page editable" on public.page_property_values;
+drop policy if exists "Values deletable if page editable" on public.page_property_values;
 
 create policy "Values viewable if page viewable" 
   on public.page_property_values for select 
@@ -66,8 +70,9 @@ create policy "Values deletable if page editable"
   using (public.has_page_access_secure(page_id));
 
 -- 4. Ensure 'databases' table itself is viewable!
--- If the user cannot Query 'databases', they can't get the ID to query properties.
 drop policy if exists "Databases viewable if page viewable" on public.databases;
+drop policy if exists "Databases insertable if page editable" on public.databases;
+
 create policy "Databases viewable if page viewable"
   on public.databases for select
   using (public.has_page_access_secure(page_id));
@@ -75,4 +80,3 @@ create policy "Databases viewable if page viewable"
 create policy "Databases insertable if page editable"
   on public.databases for insert
   with check (public.has_page_access_secure(page_id));
-
