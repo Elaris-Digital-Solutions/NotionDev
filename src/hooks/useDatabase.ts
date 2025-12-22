@@ -35,23 +35,23 @@ export function useDatabase(pageId: string) {
 
   // 2. Get properties
   const { data: properties } = useQuery({
-    queryKey: ['database_properties', database?.id],
+    queryKey: ['database_properties', (database as any)?.id],
     queryFn: async () => {
-      if (!database?.id) return [];
+      const db = database as any;
+      if (!db?.id) return [];
       const { data, error } = await supabase
         .from('database_properties')
         .select('*')
-        .eq('database_id', database.id)
+        .eq('database_id', db.id)
         .order('order');
 
       if (error) throw error;
       // Filter out system properties (starting with _)
       return (data as DatabaseProperty[]).filter(p => !p.name.startsWith('_') && p.name !== '_System_Properties_DO_NOT_DELETE');
     },
-    enabled: !!database?.id,
+    enabled: !!(database as any)?.id,
   });
 
-  // 3. Get rows (pages)
   // 3. Get rows (pages)
   // Need to fetch the Page details effectively to know if we are in a "System DB" context
   const { data: pageDetails } = useQuery({
@@ -65,9 +65,10 @@ export function useDatabase(pageId: string) {
   });
 
   const { data: rows, isLoading } = useQuery({
-    queryKey: ['database_rows', database?.id, pageDetails?.id],
+    queryKey: ['database_rows', (database as any)?.id, pageDetails?.id],
     queryFn: async () => {
-      if (!database?.id) return [];
+      const db = database as any;
+      if (!db?.id) return [];
 
       let query = supabase.from('pages').select('*');
 
@@ -77,16 +78,16 @@ export function useDatabase(pageId: string) {
         // Special "Shadow Database" Logic
         if (pageDetails.team_space_id) {
           // Team Space: Fetch Root items OR Children of System DB OR Linked to System DB
-          query = query.or(`and(team_space_id.eq.${pageDetails.team_space_id},parent_id.is.null),parent_id.eq.${pageDetails.id},parent_database_id.eq.${database.id}`);
+          query = query.or(`and(team_space_id.eq.${pageDetails.team_space_id},parent_id.is.null),parent_id.eq.${pageDetails.id},parent_database_id.eq.${db.id}`);
         } else {
           // Private Space: Fetch Root private items OR Children of System DB OR Linked
-          query = query.or(`and(owner_id.eq.${pageDetails.owner_id},team_space_id.is.null,parent_id.is.null),parent_id.eq.${pageDetails.id},parent_database_id.eq.${database.id}`);
+          query = query.or(`and(owner_id.eq.${pageDetails.owner_id},team_space_id.is.null,parent_id.is.null),parent_id.eq.${pageDetails.id},parent_database_id.eq.${db.id}`);
         }
         // Always exclude self (System DB Page)
         query = query.neq('id', pageDetails.id);
       } else {
         // Standard Database Logic
-        query = query.eq('parent_database_id', database.id);
+        query = query.eq('parent_database_id', db.id);
       }
 
       const { data: pages, error } = await query.neq('title', '_System_Properties_DO_NOT_DELETE');
@@ -113,18 +114,10 @@ export function useDatabase(pageId: string) {
 
       return pagesWithProps;
     },
-    enabled: !!database?.id && (!!pageDetails || !!pageId),
+    enabled: !!(database as any)?.id && (!!pageDetails || !!pageId),
   });
 
-  // 4. Auto-create default columns if missing
-  const queryClient = import('@tanstack/react-query').then(m => m.useQueryClient());
-  // We need the queryClient instance, but we can't await import in body.
-  // Actually, let's just use the supabase client directly for the check, no need for mutations hook overhead here for simplicity.
-
-  // Actually, we can just use the queryClient from context if we move this logical check to a component or just fire-and-forget here.
-  // Better: DO NOT use useEffect for side effects that change DB if possible, but here it's necessary for "migration".
-  // A cleaner simple way:
-
+  // 4. Auto-create default columns logic removed to prevent race conditions.
   const qc = useQueryClient();
 
   // 4. Removed auto-create default columns logic to prevent race conditions with useEnsureSystemDatabase.
