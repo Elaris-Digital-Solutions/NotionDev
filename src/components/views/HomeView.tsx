@@ -1,7 +1,7 @@
-import { 
-  CheckCircle2, 
-  Clock, 
-  Calendar, 
+import {
+  CheckCircle2,
+  Clock,
+  Calendar,
   Star,
   ArrowRight,
   FileText,
@@ -24,18 +24,23 @@ import { useAuth } from "@/components/providers/AuthProvider";
 export function HomeView() {
   const today = new Date();
   const { user } = useAuth();
-  
+
   const { data: recentPages = [] } = useQuery({
     queryKey: ['recentPages', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('pages')
         .select('*')
         .eq('owner_id', user.id)
         .order('updated_at', { ascending: false })
         .limit(4);
-      return data as Page[];
+
+      if (error) {
+        console.error('Error fetching recent pages:', error);
+        return [];
+      }
+      return (data || []) as Page[];
     },
     enabled: !!user
   });
@@ -44,13 +49,18 @@ export function HomeView() {
     queryKey: ['upcomingMeetings', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('meetings')
         .select('*')
         .gte('date', new Date().toISOString())
         .order('date')
         .limit(5);
-      return data as Meeting[];
+
+      if (error) {
+        console.error('Error fetching meetings:', error);
+        return [];
+      }
+      return (data || []) as Meeting[];
     },
     enabled: !!user
   });
@@ -59,12 +69,17 @@ export function HomeView() {
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('pages')
         .select('*')
         .eq('owner_id', user.id)
         .eq('is_favorite', true);
-      return data as Page[];
+
+      if (error) {
+        console.error('Error fetching favorites:', error);
+        return [];
+      }
+      return (data || []) as Page[];
     },
     enabled: !!user
   });
@@ -74,14 +89,19 @@ export function HomeView() {
     queryFn: async () => {
       if (!user) return [];
       // Fetch pages that are part of a database (rows)
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('pages')
         .select('*')
         .eq('owner_id', user.id)
         .not('parent_database_id', 'is', null)
         .order('created_at', { ascending: false })
         .limit(5);
-      return data as Page[];
+
+      if (error) {
+        console.error('Error fetching recent tasks:', error);
+        return [];
+      }
+      return (data || []) as Page[];
     },
     enabled: !!user
   });
@@ -144,26 +164,26 @@ export function HomeView() {
           </CardHeader>
           <CardContent className="space-y-3">
             {recentTasks.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No hay ítems recientes</div>
+              <div className="text-center py-8 text-muted-foreground">No hay ítems recientes</div>
             ) : (
-                recentTasks.map((task) => (
+              recentTasks.map((task) => (
                 <Link
-                    to={`/page/${task.id}`}
-                    key={task.id}
-                    className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+                  to={`/page/${task.id}`}
+                  key={task.id}
+                  className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
                 >
-                    <div className="flex-1 min-w-0 flex items-center gap-3">
-                        <span className="text-lg">{task.icon || '📄'}</span>
-                        <div>
-                            <p className="font-medium text-foreground truncate">{task.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                                Creado el {format(new Date(task.created_at), "d MMM", { locale: es })}
-                            </p>
-                        </div>
+                  <div className="flex-1 min-w-0 flex items-center gap-3">
+                    <span className="text-lg">{task.icon || '📄'}</span>
+                    <div>
+                      <p className="font-medium text-foreground truncate">{task.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Creado el {format(new Date(task.created_at), "d MMM", { locale: es })}
+                      </p>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
-                ))
+              ))
             )}
           </CardContent>
         </Card>
@@ -178,25 +198,25 @@ export function HomeView() {
           </CardHeader>
           <CardContent className="space-y-3">
             {upcomingMeetings.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No hay reuniones programadas</div>
+              <div className="text-center py-8 text-muted-foreground">No hay reuniones programadas</div>
             ) : (
-                upcomingMeetings.map((meeting) => (
+              upcomingMeetings.map((meeting) => (
                 <div
-                    key={meeting.id}
-                    className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
+                  key={meeting.id}
+                  className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
                 >
-                    <p className="font-medium text-foreground">{meeting.title}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                  <p className="font-medium text-foreground">{meeting.title}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
                     {format(new Date(meeting.date), "d MMM, HH:mm", { locale: es })}
-                    </p>
-                    <div className="flex items-center gap-1 mt-2">
+                  </p>
+                  <div className="flex items-center gap-1 mt-2">
                     <Users className="w-3 h-3 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">
-                        {(meeting.participants || []).length} participantes
+                      {(meeting.participants || []).length} participantes
                     </span>
-                    </div>
+                  </div>
                 </div>
-                ))
+              ))
             )}
           </CardContent>
         </Card>
@@ -230,17 +250,17 @@ export function HomeView() {
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {favorites.length === 0 ? (
-              <div className="col-span-4 text-muted-foreground text-sm italic">No tienes favoritos aún</div>
+            <div className="col-span-4 text-muted-foreground text-sm italic">No tienes favoritos aún</div>
           ) : (
             favorites.map((page) => (
-                <Link
+              <Link
                 to={`/page/${page.id}`}
                 key={page.id}
                 className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:border-primary/50 hover:bg-accent/30 transition-all text-left"
-                >
+              >
                 <span className="text-2xl">{page.icon || '📄'}</span>
                 <span className="font-medium text-foreground truncate">{page.title}</span>
-                </Link>
+              </Link>
             ))
           )}
         </div>
