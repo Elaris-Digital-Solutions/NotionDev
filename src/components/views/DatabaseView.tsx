@@ -21,35 +21,42 @@ import { CalendarView } from "@/components/database/CalendarView";
 
 const views: { id: ViewType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'table', label: 'Table', icon: Star },
-  { id: 'kanban', label: 'Board', icon: Kanban },
   { id: 'calendar', label: 'Calendar', icon: Calendar },
 ];
+import { useDatabase } from "@/hooks/useDatabase";
+import { usePageMutations } from "@/hooks/usePageMutations";
+import { useDatabaseMutations } from "@/hooks/useDatabaseMutations";
+import { DatabaseProperties } from "@/components/database/DatabaseProperties";
+// ... imports
+
 // ... imports
 
 export function DatabaseView({ title = "Database", icon = "🔍", pageId, members = [] }: { title?: string; icon?: string; pageId: string; members?: any[] }) {
   const [currentView, setCurrentView] = useState<ViewType>('table');
   const { rows, properties, database, isLoading } = useDatabase(pageId);
   const { createChildPage } = usePageMutations(pageId);
-  const { addProperty, updateProperty, deleteProperty } = useDatabaseMutations(database?.id);
+  // Explicitly handle databaseId potentially being undefined, hook handles it but we should be safe
+  const { addProperty, updateProperty, deleteProperty } = useDatabaseMutations(database?.id || '');
 
   const renderView = () => {
     if (isLoading) return <div className="p-8">Loading database...</div>;
     if (!database) return <div className="p-8">Database not found</div>;
+    const db = database as any;
 
     return (
       <div className="space-y-4">
         <DatabaseProperties
-          columns={properties}
-          onAddColumn={(col) => addProperty.mutate(col)}
-          onUpdateColumn={(id, updates) => updateProperty.mutate({ id, updates })}
+          columns={properties as any} // Cast to any to avoid string vs enum mismatch for now
+          onAddColumn={(col) => addProperty.mutate(col as any)}
+          onUpdateColumn={(id, updates) => updateProperty.mutate({ id, updates: updates as any })}
           onDeleteColumn={(id) => deleteProperty.mutate(id)}
         />
         {(() => {
           switch (currentView) {
-            case 'table': return <TableView rows={rows} properties={properties} pageId={pageId} databaseId={database.id} members={members} />;
+            case 'table': return <TableView rows={rows} properties={properties} pageId={pageId} databaseId={db.id} members={members} />;
             case 'kanban': return <BoardView rows={rows} properties={properties} pageId={pageId} />;
             case 'calendar': return <CalendarView rows={rows} properties={properties} pageId={pageId} />;
-            default: return <TableView rows={rows} properties={properties} pageId={pageId} databaseId={database.id} members={members} />;
+            default: return <TableView rows={rows} properties={properties} pageId={pageId} databaseId={db.id} members={members} />;
           }
         })()}
       </div>
