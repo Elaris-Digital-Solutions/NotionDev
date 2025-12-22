@@ -8,6 +8,8 @@ export interface DatabaseProperty {
   name: string;
   type: string;
   options?: any;
+  config?: any;
+  position?: number;
 }
 
 export interface DatabaseRow extends Page {

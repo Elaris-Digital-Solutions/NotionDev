@@ -2,6 +2,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect } from 'react';
 import Placeholder from '@tiptap/extension-placeholder';
+import { SlashCommand, getSuggestionItems, renderItems } from './extensions/SlashCommand';
 
 interface TiptapBlockProps {
   content: any;
@@ -16,8 +17,14 @@ export function TiptapBlock({ content, onUpdate, onBlur, onKeyDown, autoFocus = 
     extensions: [
       StarterKit,
       Placeholder.configure({
-        placeholder: 'Type something...',
+        placeholder: "Type '/' for commands",
         emptyEditorClass: 'is-editor-empty before:content-[attr(data-placeholder)] before:text-muted-foreground before:float-left before:h-0 before:pointer-events-none',
+      }),
+      SlashCommand.configure({
+        suggestion: {
+          items: getSuggestionItems,
+          render: renderItems,
+        },
       }),
     ],
     content: content || { type: 'doc', content: [{ type: 'paragraph' }] },
@@ -37,13 +44,13 @@ export function TiptapBlock({ content, onUpdate, onBlur, onKeyDown, autoFocus = 
       }
     },
     onUpdate: ({ editor }) => {
-       // Debounce should happen at parent level or here. 
-       // For now, we pass up immediately, but parent should guard db writes.
-       // Actually, guardrails say: "Trigger: onBlur or Debounce".
-       // We will implement onBlur saving in the wrapper. 
-       // But we need to keep local state in sync? 
-       // Actually, for Tiptap, we shouldn't lift state on every keystroke if it causes re-render of parent.
-       // But assuming we want to save on blur, we need to pass the new content out.
+      // Debounce should happen at parent level or here. 
+      // For now, we pass up immediately, but parent should guard db writes.
+      // Actually, guardrails say: "Trigger: onBlur or Debounce".
+      // We will implement onBlur saving in the wrapper. 
+      // But we need to keep local state in sync? 
+      // Actually, for Tiptap, we shouldn't lift state on every keystroke if it causes re-render of parent.
+      // But assuming we want to save on blur, we need to pass the new content out.
     },
     onBlur: ({ editor }) => {
       onUpdate(editor.getJSON(), editor.getText());
@@ -64,7 +71,7 @@ export function TiptapBlock({ content, onUpdate, onBlur, onKeyDown, autoFocus = 
 
   // Pass keydown events to parent for navigation (ArrowUp, ArrowDown, Enter)
   const handleKeyDown = (e: React.KeyboardEvent) => {
-     if (onKeyDown) onKeyDown(e);
+    if (onKeyDown) onKeyDown(e);
   };
 
   return (

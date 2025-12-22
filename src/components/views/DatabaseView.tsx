@@ -16,23 +16,15 @@ import { Button } from "@/components/ui/button";
 import { ViewType } from "@/types/workspace";
 import { cn } from "@/lib/utils";
 import { TableView } from "@/components/database/TableView";
-import { KanbanView } from "@/components/database/KanbanView";
-import { ListView } from "@/components/database/ListView";
-import { GalleryView } from "@/components/database/GalleryView";
+import { BoardView } from "@/components/database/BoardView";
 import { CalendarView } from "@/components/database/CalendarView";
 
 const views: { id: ViewType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'table', label: 'Table', icon: Star },
   { id: 'kanban', label: 'Board', icon: Kanban },
-  { id: 'list', label: 'List', icon: List },
-  { id: 'gallery', label: 'Gallery', icon: LayoutGrid },
   { id: 'calendar', label: 'Calendar', icon: Calendar },
 ];
-
-import { useDatabase } from "@/hooks/useDatabase";
-import { usePageMutations } from "@/hooks/usePageMutations";
-import { DatabaseProperties } from "@/components/database/DatabaseProperties";
-import { useDatabaseMutations } from "@/hooks/useDatabaseMutations";
+// ... imports
 
 export function DatabaseView({ title = "Database", icon = "🔍", pageId, members = [] }: { title?: string; icon?: string; pageId: string; members?: any[] }) {
   const [currentView, setCurrentView] = useState<ViewType>('table');
@@ -55,9 +47,7 @@ export function DatabaseView({ title = "Database", icon = "🔍", pageId, member
         {(() => {
           switch (currentView) {
             case 'table': return <TableView rows={rows} properties={properties} pageId={pageId} databaseId={database.id} members={members} />;
-            case 'kanban': return <KanbanView rows={rows} properties={properties} pageId={pageId} />;
-            case 'list': return <ListView rows={rows} properties={properties} pageId={pageId} />;
-            case 'gallery': return <GalleryView rows={rows} properties={properties} pageId={pageId} />;
+            case 'kanban': return <BoardView rows={rows} properties={properties} pageId={pageId} />;
             case 'calendar': return <CalendarView rows={rows} properties={properties} pageId={pageId} />;
             default: return <TableView rows={rows} properties={properties} pageId={pageId} databaseId={database.id} members={members} />;
           }

@@ -15,6 +15,9 @@ export interface Page {
   team_space_id?: string | null;
   owner_id: string;
   type: PageType;
+  is_database: boolean;
+  position: number;
+  deleted_at?: string | null;
   created_at: string;
   updated_at: string;
   blocks?: Block[];
@@ -69,9 +72,10 @@ export interface Project {
 
 export interface Notification {
   id: string;
-  type: 'mention' | 'assignment' | 'status-change' | 'comment';
+  type: 'mention' | 'assignment' | 'status-change' | 'comment' | 'info';
   title: string;
   message: string;
+  link?: string;
   read: boolean;
   created_at: string;
 }
@@ -95,6 +99,8 @@ export interface Block {
   version: number;
   properties: any;
   order: number;
+  position: number;
+  deleted_at?: string | null;
   parent_block_id: string | null;
   children?: Block[];
 }
@@ -102,6 +108,8 @@ export interface Block {
 export interface DatabaseColumn {
   id: string;
   name: string;
-  type: 'text' | 'number' | 'select' | 'multi_select' | 'status' | 'date' | 'person' | 'files' | 'checkbox' | 'url' | 'email' | 'phone';
+  type: 'text' | 'number' | 'select' | 'multi_select' | 'status' | 'priority' | 'date' | 'person' | 'files' | 'checkbox' | 'url' | 'email' | 'phone';
   options?: any[];
+  config?: any; // e.g. { options: [{ id, name, color }] }
+  position: number;
 }

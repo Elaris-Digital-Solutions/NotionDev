@@ -26,7 +26,7 @@ interface PageViewProps {
 export function PageView({ pageId }: PageViewProps) {
   const { page, blocks, isLoading } = usePage(pageId);
   // Use mutations for blocks
-  const { updatePage, updateBlock, deleteBlock, createBlock, moveBlock } = usePageMutations(pageId);
+  const { updatePage, updateBlock, deleteBlock, createBlock, reorderBlock } = usePageMutations(pageId);
   const { updatePropertyValue } = useDatabaseMutations();
 
   // 2. Ensure System Database & Get Definitions
@@ -163,7 +163,7 @@ export function PageView({ pageId }: PageViewProps) {
             }}
             onUpdateBlock={(id, content, plainText, version) => updateBlock.mutate({ blockId: id, content, plainText, version })}
             onDeleteBlock={(id) => deleteBlock.mutate(id)}
-          // onMoveBlock={(id, direction) => moveBlock.mutate({ blockId: id, direction })} // Temporarily disabled for virtualization refactor compatibility if needed, or keeping if it works with virtual list (it should)
+            onReorderBlock={(activeId, overId) => reorderBlock.mutate({ activeId, overId })}
           />
         </div>
       </div>

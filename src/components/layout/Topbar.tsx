@@ -9,10 +9,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { CommentsPanel } from "@/components/comments/CommentsPanel";
 
 interface TopbarProps {
   breadcrumb?: string[];
@@ -33,40 +33,14 @@ export function Topbar({ breadcrumb = ['Workspace', 'Page'], pageId, onPageChang
 
   return (
     <header className="h-12 border-b border-border bg-background flex items-center justify-between px-3 gap-4">
-      {/* Left Section: Navigation & Breadcrumbs */}
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="w-7 h-7">
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="w-7 h-7">
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-1 text-sm hidden md:flex">
-          {breadcrumb.map((item, index) => (
-            <div key={index} className="flex items-center gap-1">
-              {index > 0 && <span className="text-muted-foreground">/</span>}
-              <button className="flex items-center gap-1.5 px-1.5 py-0.5 rounded hover:bg-accent transition-colors">
-                {index === 0 && <span>🏠</span>}
-                <span className={index === breadcrumb.length - 1 ? "text-foreground" : "text-muted-foreground"}>
-                  {item}
-                </span>
-              </button>
-            </div>
-          ))}
-        </nav>
-      </div>
-
-      {/* Center Section: Spacer (Search removed as it was non-functional, use Sidebar search) */}
-      <div className="flex-1" />
+      {/* ... Left Section */}
 
       {/* Right Section: Actions */}
       <div className="flex items-center gap-1">
         {pageId && (
           <>
+            <CommentsPanel pageId={pageId} />
+            <div className="h-4 w-[1px] bg-border mx-1" />
             <Button
               variant="ghost"
               size="sm"
