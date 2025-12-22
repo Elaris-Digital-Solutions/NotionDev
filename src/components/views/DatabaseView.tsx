@@ -18,25 +18,21 @@ import { cn } from "@/lib/utils";
 import { TableView } from "@/components/database/TableView";
 import { BoardView } from "@/components/database/BoardView";
 import { CalendarView } from "@/components/database/CalendarView";
+import { useDatabase } from "@/hooks/useDatabase";
+import { usePageMutations } from "@/hooks/usePageMutations";
+import { useDatabaseMutations } from "@/hooks/useDatabaseMutations";
+import { DatabaseProperties } from "@/components/database/DatabaseProperties";
 
 const views: { id: ViewType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'table', label: 'Table', icon: Star },
   { id: 'calendar', label: 'Calendar', icon: Calendar },
 ];
-import { useDatabase } from "@/hooks/useDatabase";
-import { usePageMutations } from "@/hooks/usePageMutations";
-import { useDatabaseMutations } from "@/hooks/useDatabaseMutations";
-import { DatabaseProperties } from "@/components/database/DatabaseProperties";
-// ... imports
-
-// ... imports
-
 export function DatabaseView({ title = "Database", icon = "🔍", pageId, members = [] }: { title?: string; icon?: string; pageId: string; members?: any[] }) {
   const [currentView, setCurrentView] = useState<ViewType>('table');
   const { rows, properties, database, isLoading } = useDatabase(pageId);
   const { createChildPage } = usePageMutations(pageId);
   // Explicitly handle databaseId potentially being undefined, hook handles it but we should be safe
-  const { addProperty, updateProperty, deleteProperty } = useDatabaseMutations(database?.id || '');
+  const { addProperty, updateProperty, deleteProperty } = useDatabaseMutations((database as any)?.id || '');
 
   const renderView = () => {
     if (isLoading) return <div className="p-8">Loading database...</div>;
