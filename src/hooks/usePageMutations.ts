@@ -219,8 +219,7 @@ export function usePageMutations(pageId: string) {
     },
     mutationFn: async ({ activeId, overId }: { activeId: string; overId: string }) => {
       // We need the current state to calculate positions
-      const { data: blocks } = await supabase
-        .from('blocks')
+      const { data: blocks } = await (supabase.from('blocks') as any)
         .select('id, order')
         .eq('page_id', pageId)
         .order('order', { ascending: true });
@@ -250,7 +249,7 @@ export function usePageMutations(pageId: string) {
       const updatesToRun = updates.filter((u, idx) => u.order !== blocks.find(b => b.id === u.id)?.order);
 
       await Promise.all(updatesToRun.map(u =>
-        supabase.from('blocks').update({ order: u.order }).eq('id', u.id)
+        (supabase.from('blocks') as any).update({ order: u.order }).eq('id', u.id)
       ));
     },
     onError: (err, vars, context) => {

@@ -14,6 +14,7 @@ interface AuthContextType {
   updatePassword: (password: string) => Promise<void>;
   reauthenticate: (password: string) => Promise<void>;
   refreshSession: () => Promise<void>;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextType>({
   updatePassword: async () => { },
   reauthenticate: async () => { },
   refreshSession: async () => { },
+  loading: false,
 });
 
 export const useAuth = () => useContext(AuthContext);

@@ -75,42 +75,40 @@ export function useDatabase(pageId: string) {
       const isSystemDB = pageDetails?.title === '_System_Properties_DO_NOT_DELETE';
 
       if (isSystemDB && pageDetails) {
-        // Special "Shadow Database" Logic
         if (pageDetails.team_space_id) {
-          // Team Space: Fetch Root items OR Children of System DB OR Linked to System DB
           query = query.or(`and(team_space_id.eq.${pageDetails.team_space_id},parent_id.is.null),parent_id.eq.${pageDetails.id},parent_database_id.eq.${db.id}`);
         } else {
-          // Private Space: Fetch Root private items OR Children of System DB OR Linked
           query = query.or(`and(owner_id.eq.${pageDetails.owner_id},team_space_id.is.null,parent_id.is.null),parent_id.eq.${pageDetails.id},parent_database_id.eq.${db.id}`);
         }
-        // Always exclude self (System DB Page)
         query = query.neq('id', pageDetails.id);
       } else {
-        // Standard Database Logic
         query = query.eq('parent_database_id', db.id);
       }
 
-      const { data: pages, error } = await query.neq('title', '_System_Properties_DO_NOT_DELETE');
+      const { data: pages, error } = await (query as any).neq('title', '_System_Properties_DO_NOT_DELETE');
 
       if (error) throw error;
+      if (!pages || pages.length === 0) return [];
 
-      // For each page, fetch its property values
-      // This is N+1 but okay for MVP. Ideally use a join or RPC.
-      const pagesWithProps = await Promise.all((pages || []).map(async (page: any) => {
-        const { data: props } = await supabase
-          .from('page_property_values')
-          .select('*, database_properties(name)')
-          .eq('page_id', page.id);
+      // Optimize: Batch fetch properties for all pages
+      const pageIds = pages.map((p: any) => p.id);
+      const { data: allProps } = await (supabase.from('page_property_values') as any)
+        .select('*, database_properties(name)')
+        .in('page_id', pageIds);
 
+      // Map properties to pages
+      const pagesWithProps = pages.map((page: any) => {
+        const pageProps = allProps?.filter(p => p.page_id === page.id) || [];
         const propMap: Record<string, any> = {};
-        props?.forEach((p: any) => {
+
+        pageProps.forEach((p: any) => {
           if (p.database_properties?.name) {
             propMap[p.database_properties.name] = p.value;
           }
         });
 
         return { ...page, properties: propMap } as DatabaseRow;
-      }));
+      });
 
       return pagesWithProps;
     },

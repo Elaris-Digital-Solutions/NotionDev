@@ -10,6 +10,7 @@ import {
 import { StatusBadge, PriorityBadge } from "@/components/badges/StatusBadge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { DatabaseRow, DatabaseProperty } from "@/hooks/useDatabase";
+import { DatabaseColumn } from "@/types/workspace";
 import { Link } from "react-router-dom";
 import { useDatabaseMutations } from "@/hooks/useDatabaseMutations";
 import { Plus, MoreHorizontal, Trash } from "lucide-react";
@@ -33,6 +34,7 @@ interface TableViewProps {
   properties: DatabaseProperty[];
   pageId: string;
   databaseId?: string;
+  members?: any[];
 }
 
 export function TableView({ rows, properties, pageId, databaseId }: TableViewProps) {
@@ -70,9 +72,9 @@ export function TableView({ rows, properties, pageId, databaseId }: TableViewPro
                     <span className="text-xs">#</span>
                     {prop.name}
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-6 w-6 opacity-0 group-hover:opacity-100"
                     onClick={() => deleteProperty.mutate(prop.id)}
                   >
@@ -103,7 +105,7 @@ export function TableView({ rows, properties, pageId, databaseId }: TableViewPro
                         value={newPropName}
                         onChange={(e) => setNewPropName(e.target.value)}
                       />
-                      <Select value={newPropType} onValueChange={setNewPropType}>
+                      <Select value={newPropType} onValueChange={(val) => setNewPropType(val as DatabaseColumn['type'])}>
                         <SelectTrigger>
                           <SelectValue placeholder="Type" />
                         </SelectTrigger>
@@ -162,32 +164,32 @@ function EditableCell({ value, type, onChange }: { value: any; type: string; onC
 
   if (isEditing) {
     if (type === 'status') {
-       return (
-         <Select value={localValue} onValueChange={(val) => { setLocalValue(val); onChange(val); setIsEditing(false); }}>
-            <SelectTrigger className="h-8 border-none shadow-none">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="not-started">Not Started</SelectItem>
-              <SelectItem value="in-progress">In Progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-            </SelectContent>
-         </Select>
-       );
+      return (
+        <Select value={localValue} onValueChange={(val) => { setLocalValue(val); onChange(val); setIsEditing(false); }}>
+          <SelectTrigger className="h-8 border-none shadow-none">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="not-started">Not Started</SelectItem>
+            <SelectItem value="in-progress">In Progress</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+      );
     }
     if (type === 'priority') {
-       return (
-         <Select value={localValue} onValueChange={(val) => { setLocalValue(val); onChange(val); setIsEditing(false); }}>
-            <SelectTrigger className="h-8 border-none shadow-none">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-            </SelectContent>
-         </Select>
-       );
+      return (
+        <Select value={localValue} onValueChange={(val) => { setLocalValue(val); onChange(val); setIsEditing(false); }}>
+          <SelectTrigger className="h-8 border-none shadow-none">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="low">Low</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+          </SelectContent>
+        </Select>
+      );
     }
     return (
       <Input
@@ -201,7 +203,7 @@ function EditableCell({ value, type, onChange }: { value: any; type: string; onC
   }
 
   return (
-    <div 
+    <div
       className="min-h-[32px] flex items-center px-4 cursor-pointer hover:bg-muted/50"
       onClick={() => { setLocalValue(value); setIsEditing(true); }}
     >
@@ -212,7 +214,7 @@ function EditableCell({ value, type, onChange }: { value: any; type: string; onC
 
 function renderPropertyValue(value: any, type: string) {
   if (!value) return <span className="text-muted-foreground/30">-</span>;
-  
+
   switch (type) {
     case 'status':
       return <StatusBadge status={value} />;

@@ -12,50 +12,64 @@ const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>; // Add a loading state fallback
   }
   if (!user) return <Navigate to="/login" />;
-  
+
   return <>{children}</>;
 };
 
+import { ErrorBoundary } from "./components/error/ErrorBoundary";
+
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            } />
-            <Route path="/inbox" element={
-              <ProtectedRoute>
-                <Index view="inbox" />
-              </ProtectedRoute>
-            } />
-            <Route path="/meetings" element={
-              <ProtectedRoute>
-                <Index view="meetings" />
-              </ProtectedRoute>
-            } />
-            <Route path="/page/:pageId" element={
-              <ProtectedRoute>
-                <Index view="page" />
-              </ProtectedRoute>
-            } />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              } />
+              <Route path="/inbox" element={
+                <ProtectedRoute>
+                  <Index view="inbox" />
+                </ProtectedRoute>
+              } />
+              <Route path="/meetings" element={
+                <ProtectedRoute>
+                  <Index view="meetings" />
+                </ProtectedRoute>
+              } />
+              <Route path="/page/:pageId" element={
+                <ProtectedRoute>
+                  <Index view="page" />
+                </ProtectedRoute>
+              } />
+              <Route path="/teamspace/:teamSpaceId" element={
+                <ProtectedRoute>
+                  <Index view="teamspace" />
+                </ProtectedRoute>
+              } />
+              <Route path="/private" element={
+                <ProtectedRoute>
+                  <Index view="private" />
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

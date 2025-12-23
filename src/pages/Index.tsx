@@ -34,7 +34,10 @@ const Index = ({ view = 'home' }: IndexProps) => {
 
   const handlePageChange = (page: string) => {
     if (page.startsWith('teamspace/')) {
-      navigate(`/${page}`);
+      const teamId = page.split('/')[1];
+      navigate(`/teamspace/${teamId}`);
+    } else if (page === 'private') {
+      navigate('/private');
     } else if (['home', 'inbox', 'meetings'].includes(page)) {
       navigate(page === 'home' ? '/' : `/${page}`);
     } else {

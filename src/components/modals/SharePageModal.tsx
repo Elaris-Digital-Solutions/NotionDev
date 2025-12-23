@@ -31,7 +31,7 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
         .select('is_public')
         .eq('id', pageId)
         .single();
-      
+
       const { data: permissions } = await supabase
         .from('page_permissions')
         .select('*, user:profiles(email)')
@@ -63,7 +63,7 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
         .select('id')
         .eq('email', inviteEmail)
         .single();
-      
+
       if (profileError || !profiles) throw new Error("User not found");
 
       const { error } = await supabase
@@ -126,8 +126,8 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
                 </div>
               </div>
             </div>
-            <Switch 
-              checked={pageData?.page?.is_public} 
+            <Switch
+              checked={!!pageData?.page?.is_public}
               onCheckedChange={(checked) => togglePublic.mutate(checked)}
             />
           </div>
@@ -145,8 +145,8 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
 
           {/* Invite Section */}
           <div className="flex gap-2">
-            <Input 
-              placeholder="Email address" 
+            <Input
+              placeholder="Email address"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
             />
@@ -176,9 +176,9 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
                   <span className="text-muted-foreground text-xs capitalize">
                     {perm.role.replace('_', ' ')}
                   </span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-6 w-6"
                     onClick={() => removePermission.mutate(perm.id)}
                   >

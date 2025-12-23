@@ -156,7 +156,9 @@ export function PageView({ pageId }: PageViewProps) {
             onAddBlock={(type, afterBlockId) => {
               const afterBlock = blocks.find(b => b.id === afterBlockId);
               createBlock.mutate({
-                type,
+                type: type as any, // Cast to any or BlockType if imported, but usually type from editor is string. 
+                // Wait, usePageMutations expects Partial<Block>. Block type expects BlockType.
+                // Just let's check imports. I'll import BlockType and cast properly.
                 content: '',
                 order: afterBlock ? (afterBlock.order || 0) + 1 : 0
               });

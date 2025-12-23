@@ -16,6 +16,12 @@ export interface Page {
   created_at: string;
   updated_at: string;
   blocks?: Block[];
+  team_space_id: string | null;
+  owner_id: string;
+  is_favorite?: boolean;
+  is_database?: boolean;
+  position?: number;
+  parent_database_id?: string | null;
 }
 
 export interface TeamSpace {
@@ -113,6 +119,9 @@ export interface Block {
   order: number;
   parent_block_id: string | null;
   children?: Block[];
+  version?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface DatabaseColumn {
@@ -120,6 +129,8 @@ export interface DatabaseColumn {
   name: string;
   type: 'text' | 'number' | 'select' | 'multi_select' | 'status' | 'date' | 'person' | 'files' | 'checkbox' | 'url' | 'email' | 'phone';
   options?: any[];
+  config?: any;
+  position?: number;
 }
 
 export interface DatabaseProperty {

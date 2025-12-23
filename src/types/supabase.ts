@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       profiles: {
@@ -86,6 +86,10 @@ export interface Database {
           created_at: string
           updated_at: string
           parent_database_id: string | null
+          is_public: boolean
+          is_database: boolean
+          position: number
+          deleted_at: string | null
         }
         Insert: {
           id?: string
@@ -100,6 +104,10 @@ export interface Database {
           created_at?: string
           updated_at?: string
           parent_database_id?: string | null
+          is_public?: boolean
+          is_database?: boolean
+          position?: number
+          deleted_at?: string | null
         }
         Update: {
           id?: string
@@ -114,6 +122,10 @@ export interface Database {
           created_at?: string
           updated_at?: string
           parent_database_id?: string | null
+          is_public?: boolean
+          is_database?: boolean
+          position?: number
+          deleted_at?: string | null
         }
       }
       blocks: {
@@ -127,6 +139,10 @@ export interface Database {
           parent_block_id: string | null
           created_at: string
           updated_at: string
+          version: number
+          plain_text: string | null
+          position: number
+          deleted_at: string | null
         }
         Insert: {
           id?: string
@@ -138,6 +154,10 @@ export interface Database {
           parent_block_id?: string | null
           created_at?: string
           updated_at?: string
+          version?: number
+          plain_text?: string | null
+          position?: number
+          deleted_at?: string | null
         }
         Update: {
           id?: string
@@ -149,6 +169,10 @@ export interface Database {
           parent_block_id?: string | null
           created_at?: string
           updated_at?: string
+          version?: number
+          plain_text?: string | null
+          position?: number
+          deleted_at?: string | null
         }
       }
       databases: {
@@ -179,6 +203,9 @@ export interface Database {
           type: string
           options: Json | null
           order: number
+          config: Json
+          position: number
+          deleted_at: string | null
         }
         Insert: {
           id?: string
@@ -187,6 +214,9 @@ export interface Database {
           type: string
           options?: Json | null
           order: number
+          config?: Json
+          position?: number
+          deleted_at?: string | null
         }
         Update: {
           id?: string
@@ -195,6 +225,29 @@ export interface Database {
           type?: string
           options?: Json | null
           order?: number
+          config?: Json
+          position?: number
+          deleted_at?: string | null
+        }
+      }
+      page_permissions: {
+        Row: {
+          id: string
+          page_id: string
+          user_id: string
+          role: 'full_access' | 'can_edit' | 'can_comment' | 'can_view'
+        }
+        Insert: {
+          id?: string
+          page_id: string
+          user_id: string
+          role: 'full_access' | 'can_edit' | 'can_comment' | 'can_view'
+        }
+        Update: {
+          id?: string
+          page_id?: string
+          user_id?: string
+          role?: 'full_access' | 'can_edit' | 'can_comment' | 'can_view'
         }
       }
       page_property_values: {
@@ -263,6 +316,7 @@ export interface Database {
           title: string
           date: string
           notes?: string | null
+          participants?: string[] | null
           created_by: string
           created_at?: string
         }
@@ -299,7 +353,10 @@ export interface Database {
     Enums: {
       [_ in never]: never
     }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
 
-export { Database };
+
