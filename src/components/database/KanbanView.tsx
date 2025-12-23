@@ -36,10 +36,10 @@ export function KanbanView({ rows, properties, pageId }: KanbanViewProps) {
 
   const handleCreateNew = async (statusId: string) => {
     if (!statusProp) return;
-    
+
     // 1. Create the page
-    const newPage = await createChildPage.mutateAsync('Untitled');
-    
+    const newPage = await createChildPage.mutateAsync('Untitled') as Page; // Explicitly cast to Page
+
     // 2. Set the status property
     if (newPage) {
       await setPageProperty.mutateAsync({

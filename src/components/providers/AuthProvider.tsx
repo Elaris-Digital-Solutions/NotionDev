@@ -143,7 +143,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       user,
       state,
-      error, // Expose loading via state derived value for backward compatibility if needed, using explicit state now
+      error,
+      loading: state === 'LOADING', // Derived loading property
       signOut,
       updatePassword,
       reauthenticate,

@@ -55,11 +55,11 @@ export function CreateMeetingModal({ open, onOpenChange }: CreateMeetingModalPro
         })
         .select()
         .single();
-        
+
       if (meetingError) throw meetingError;
 
-      // 2. Add creator as attendee
-      const attendees = [{ meeting_id: meeting.id, user_id: user.id }];
+      // Explicitly type meeting as Meeting
+      const attendees: { meeting_id: string; user_id: string }[] = [{ meeting_id: meeting.id, user_id: user.id }];
 
       // 3. Resolve other participants
       for (const email of participants) {
@@ -68,13 +68,11 @@ export function CreateMeetingModal({ open, onOpenChange }: CreateMeetingModalPro
           .select('id')
           .eq('email', email)
           .single();
-        
+
         if (profile) {
           attendees.push({ meeting_id: meeting.id, user_id: profile.id });
         } else {
-            // If user not found, we could warn, but for now we just skip or maybe we should error?
-            // Let's just skip and warn in console
-            console.warn(`User with email ${email} not found`);
+          console.warn(`User with email ${email} not found`);
         }
       }
 

@@ -79,13 +79,10 @@ export interface Database {
           icon: string | null
           cover_image: string | null
           type: 'blank' | 'database' | 'template'
-          is_database: boolean
           parent_id: string | null
           team_space_id: string | null
           owner_id: string
           is_favorite: boolean
-          position: number
-          deleted_at: string | null
           created_at: string
           updated_at: string
           parent_database_id: string | null
@@ -100,9 +97,6 @@ export interface Database {
           team_space_id?: string | null
           owner_id: string
           is_favorite?: boolean
-          is_database?: boolean
-          position?: number
-          deleted_at?: string | null
           created_at?: string
           updated_at?: string
           parent_database_id?: string | null
@@ -117,9 +111,6 @@ export interface Database {
           team_space_id?: string | null
           owner_id?: string
           is_favorite?: boolean
-          is_database?: boolean
-          position?: number
-          deleted_at?: string | null
           created_at?: string
           updated_at?: string
           parent_database_id?: string | null
@@ -130,13 +121,9 @@ export interface Database {
           id: string
           page_id: string
           type: string
-          content: Json | null // Changed to Json
-          plain_text: string | null // Added
-          version: number // Added
+          content: string | null
           properties: Json
           order: number
-          position: number
-          deleted_at: string | null
           parent_block_id: string | null
           created_at: string
           updated_at: string
@@ -145,13 +132,9 @@ export interface Database {
           id?: string
           page_id: string
           type: string
-          content?: Json | null // Changed to Json
-          plain_text?: string | null // Added
-          version?: number // Added
+          content?: string | null
           properties?: Json
-          order?: number
-          position?: number
-          deleted_at?: string | null
+          order: number
           parent_block_id?: string | null
           created_at?: string
           updated_at?: string
@@ -160,13 +143,9 @@ export interface Database {
           id?: string
           page_id?: string
           type?: string
-          content?: Json | null // Changed to Json
-          plain_text?: string | null // Added
-          version?: number // Added
+          content?: string | null
           properties?: Json
           order?: number
-          position?: number
-          deleted_at?: string | null
           parent_block_id?: string | null
           created_at?: string
           updated_at?: string
@@ -199,10 +178,7 @@ export interface Database {
           name: string
           type: string
           options: Json | null
-          config: Json | null
           order: number
-          position: number
-          deleted_at: string | null
         }
         Insert: {
           id?: string
@@ -210,10 +186,7 @@ export interface Database {
           name: string
           type: string
           options?: Json | null
-          config?: Json | null
-          order?: number
-          position?: number
-          deleted_at?: string | null
+          order: number
         }
         Update: {
           id?: string
@@ -221,10 +194,7 @@ export interface Database {
           name?: string
           type?: string
           options?: Json | null
-          config?: Json | null
           order?: number
-          position?: number
-          deleted_at?: string | null
         }
       }
       page_property_values: {
@@ -331,3 +301,5 @@ export interface Database {
     }
   }
 }
+
+export { Database };

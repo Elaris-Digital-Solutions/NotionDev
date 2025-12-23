@@ -22,43 +22,30 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<'full_access' | 'can_edit' | 'can_comment' | 'can_view'>('can_view');
 
-  const { data: shareData, isLoading } = useQuery({
+  // Fetch page details (for public status) and permissions
+  const { data: pageData } = useQuery({
     queryKey: ['page_share', pageId],
     queryFn: async () => {
-      // 1. Fetch Page Visibility
-      const { data: page, error: pageError } = await (supabase.from('pages') as any)
-        .select('is_public, owner_id')
+      const { data: page } = await supabase
+        .from('pages')
+        .select('is_public')
         .eq('id', pageId)
         .single();
-
-      if (pageError) throw pageError;
-
-      // 2. Fetch Permissions
-      const { data: permissions, error: permError } = await (supabase.from('page_permissions') as any)
-        .select(`
-          id,
-          role,
-          user_id,
-          user:user_id (
-            email,
-            avatar_url
-          )
-        `) // cast to any to avoid TS errors with joins
+      
+      const { data: permissions } = await supabase
+        .from('page_permissions')
+        .select('*, user:profiles(email)')
         .eq('page_id', pageId);
 
-      if (permError) throw permError;
-
-      return {
-        page: page as { is_public: boolean, owner_id: string },
-        permissions: permissions as (PagePermission & { user: { email: string, avatar_url?: string } })[]
-      };
+      return { page, permissions: permissions as PagePermission[] };
     },
-    enabled: open && !!pageId
+    enabled: open
   });
 
   const togglePublic = useMutation({
     mutationFn: async (isPublic: boolean) => {
-      const { error } = await (supabase.from('pages') as any)
+      const { error } = await supabase
+        .from('pages')
         .update({ is_public: isPublic })
         .eq('id', pageId);
       if (error) throw error;
@@ -71,22 +58,19 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
 
   const addPermission = useMutation({
     mutationFn: async () => {
-      // 1. Find user by email (using public.profiles)
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('id')
-        .eq('email', inviteEmail) // This requires profiles to be searchable by email
+        .eq('email', inviteEmail)
         .single();
+      
+      if (profileError || !profiles) throw new Error("User not found");
 
-      if (profileError || !profiles) {
-        throw new Error("User not found via email search.");
-      }
-
-      // 2. Add permission
-      const { error } = await (supabase.from('page_permissions') as any)
-        .insert({
+      const { error } = await supabase
+        .from('page_permissions')
+        .upsert({
           page_id: pageId,
-          user_id: profiles.id,
+          user_id: profiles.id, // Explicitly ensure profiles has 'id'
           role: inviteRole
         });
 
@@ -97,14 +81,13 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
       setInviteEmail("");
       toast.success("User invited");
     },
-    onError: (error) => {
-      toast.error(error.message || "Failed to invite user");
-    }
+    onError: (err) => toast.error(err.message)
   });
 
   const removePermission = useMutation({
     mutationFn: async (permissionId: string) => {
-      const { error } = await (supabase.from('page_permissions') as any)
+      const { error } = await supabase
+        .from('page_permissions')
         .delete()
         .eq('id', permissionId);
       if (error) throw error;
@@ -130,111 +113,81 @@ export function SharePageModal({ pageId, open, onOpenChange }: SharePageModalPro
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-
-          {/* Public Access Section */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Globe className="w-5 h-5 text-muted-foreground" />
-              <div className="flex flex-col">
-                <span className="font-medium text-sm">Share to web</span>
-                <span className="text-xs text-muted-foreground">Anyone with the link can view</span>
+          {/* Public Toggle */}
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-full text-primary">
+                <Globe className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="font-medium">Share to web</div>
+                <div className="text-xs text-muted-foreground">
+                  {pageData?.page?.is_public ? "Anyone with the link can view" : "Only invited people can access"}
+                </div>
               </div>
             </div>
-            <Switch
-              checked={shareData?.page?.is_public || false}
+            <Switch 
+              checked={pageData?.page?.is_public} 
               onCheckedChange={(checked) => togglePublic.mutate(checked)}
-              disabled={isLoading || togglePublic.isPending}
             />
           </div>
 
-          {shareData?.page?.is_public && (
-            <div className="flex items-center gap-2">
-              <Input readOnly value={`${window.location.origin}/page/${pageId}`} className="h-8 text-xs font-mono" />
-              <Button size="sm" variant="outline" className="h-8 px-2" onClick={copyLink}>
-                <Copy className="w-3 h-3" />
+          {pageData?.page?.is_public && (
+            <div className="flex gap-2">
+              <Input readOnly value={`${window.location.origin}/page/${pageId}`} className="text-xs" />
+              <Button size="icon" variant="outline" onClick={copyLink}>
+                <Copy className="w-4 h-4" />
               </Button>
             </div>
           )}
 
-          <div className="h-[1px] bg-border my-2" />
+          <div className="border-t my-4" />
 
           {/* Invite Section */}
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Email address"
-                className="flex-1"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-              />
-              <Select value={inviteRole} onValueChange={(v: any) => setInviteRole(v)}>
-                <SelectTrigger className="w-[110px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="full_access">Full Access</SelectItem>
-                  <SelectItem value="can_edit">Can Edit</SelectItem>
-                  <SelectItem value="can_comment">Can Comment</SelectItem>
-                  <SelectItem value="can_view">Can View</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={() => addPermission.mutate()} disabled={addPermission.isPending || !inviteEmail}>
-                Invite
-              </Button>
-            </div>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Email address" 
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+            />
+            <Select value={inviteRole} onValueChange={(v: any) => setInviteRole(v)}>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="full_access">Full Access</SelectItem>
+                <SelectItem value="can_edit">Can Edit</SelectItem>
+                <SelectItem value="can_comment">Can Comment</SelectItem>
+                <SelectItem value="can_view">Can View</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={() => addPermission.mutate()} disabled={!inviteEmail}>Invite</Button>
           </div>
-
-          <div className="h-[1px] bg-border my-2" />
 
           {/* Permissions List */}
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase font-semibold">People with access</Label>
-            {isLoading ? (
-              <div className="text-sm text-muted-foreground">Loading...</div>
-            ) : (
-              <div className="space-y-2">
-                {/* Owner (Simulated for now, normally filtered or added) */}
-                {/* <div className="flex items-center justify-between text-sm">
-                   <div className="flex items-center gap-2">
-                     <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px]">O</div>
-                     <span>Owner</span>
-                   </div>
-                   <span className="text-muted-foreground text-xs">Owner</span>
-                 </div> */}
-
-                {shareData?.permissions?.map((perm) => (
-                  <div key={perm.id} className="flex items-center justify-between text-sm group">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] overflow-hidden">
-                        {perm.user?.avatar_url ? (
-                          <img src={perm.user.avatar_url} alt={perm.user.email} className="w-full h-full object-cover" />
-                        ) : (
-                          perm.user?.email?.[0].toUpperCase() || 'U'
-                        )}
-                      </div>
-                      <div className="flex flex-col">
-                        <span>{perm.user?.email || 'Unknown User'}</span>
-                        <span className="text-[10px] text-muted-foreground">{perm.role}</span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                      onClick={() => removePermission.mutate(perm.id)}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
+          <div className="space-y-2 max-h-[200px] overflow-y-auto">
+            {pageData?.permissions?.map((perm) => (
+              <div key={perm.id} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">
+                    {perm.user?.email?.[0].toUpperCase()}
                   </div>
-                ))}
-
-                {shareData?.permissions.length === 0 && (
-                  <p className="text-sm text-muted-foreground italic">No invites yet.</p>
-                )}
+                  <span>{perm.user?.email}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs capitalize">
+                    {perm.role.replace('_', ' ')}
+                  </span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6"
+                    onClick={() => removePermission.mutate(perm.id)}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
               </div>
-            )}
+            ))}
           </div>
-
         </div>
       </DialogContent>
     </Dialog>

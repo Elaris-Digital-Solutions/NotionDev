@@ -42,9 +42,6 @@ import {
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { ChangePasswordDialog } from "@/components/auth/ChangePasswordDialog";
-import { SearchModal } from "@/components/modals/SearchModal";
-import { PageTreeItem } from "@/components/layout/PageTreeItem";
 
 interface SidebarProps {
   currentPage: string;
@@ -57,12 +54,10 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
   const [teamspacesOpen, setTeamspacesOpen] = useState(true);
   const [privateOpen, setPrivateOpen] = useState(true);
   const [templatesOpen, setTemplatesOpen] = useState(true);
-
+  
   const [isTeamSpaceDialogOpen, setIsTeamSpaceDialogOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [newTeamSpaceName, setNewTeamSpaceName] = useState("");
 
   const { pages, teamSpaces, favorites, trash, isLoading } = useWorkspace();
@@ -91,7 +86,7 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
   };
 
   const handleCreatePage = async (teamSpaceId?: string) => {
-    const newPage = await createPage.mutateAsync({ teamSpaceId });
+    const newPage = await createPage.mutateAsync({ teamSpaceId }) as Page; // Explicitly cast to Page
     if (newPage) {
       onPageChange(newPage.id);
     }
@@ -107,11 +102,9 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
       <div className="p-3 border-b border-sidebar-border">
         <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-sidebar-accent transition-colors">
           <div className="w-6 h-6 rounded bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold">
-            {user?.email?.[0].toUpperCase() || 'U'}
+            E
           </div>
-          <span className="font-semibold text-sm text-sidebar-foreground truncate" title={user?.email || "User"}>
-            {user?.email ? user.email.split('@')[0] : "My Workspace"}
-          </span>
+          <span className="font-semibold text-sm text-sidebar-foreground">ELARIS Digital Sol...</span>
           <ChevronDown className="w-4 h-4 text-muted-foreground ml-auto" />
         </button>
       </div>
@@ -120,29 +113,28 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
         <div className="p-2">
           {/* Main Navigation */}
           <nav className="space-y-0.5">
-            <NavItem
-              icon={Search}
-              label="Search"
-              onClick={() => setIsSearchOpen(true)}
+            <NavItem 
+              icon={Search} 
+              label="Search" 
+              onClick={() => {}} 
             />
-            <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
-            <NavItem
-              icon={Home}
-              label="Home"
+            <NavItem 
+              icon={Home} 
+              label="Home" 
               active={currentPage === 'home'}
-              onClick={() => onPageChange('home')}
+              onClick={() => onPageChange('home')} 
             />
-            <NavItem
-              icon={Calendar}
-              label="Meetings"
-              onClick={() => onPageChange('meetings')}
+            <NavItem 
+              icon={Calendar} 
+              label="Meetings" 
+              onClick={() => onPageChange('meetings')} 
               active={currentPage === 'meetings'}
             />
-            <NavItem
-              icon={Inbox}
-              label="Inbox"
+            <NavItem 
+              icon={Inbox} 
+              label="Inbox" 
               count={unreadCount > 0 ? unreadCount : undefined}
-              onClick={() => onPageChange('inbox')}
+              onClick={() => onPageChange('inbox')} 
               active={currentPage === 'inbox'}
             />
           </nav>
@@ -220,20 +212,11 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
           {/* Private Section */}
           <Collapsible open={privateOpen} onOpenChange={setPrivateOpen} className="mt-6">
             <div className="flex items-center justify-between px-2 py-1 group/header">
-              <div className="flex items-center gap-2 w-full">
-                <CollapsibleTrigger asChild>
-                  <div className="p-1 hover:bg-sidebar-accent rounded cursor-pointer transition-colors">
-                    <ChevronRight className={cn("w-3 h-3 transition-transform text-muted-foreground", privateOpen && "rotate-90")} />
-                  </div>
-                </CollapsibleTrigger>
-                <button
-                  onClick={() => onPageChange('private')}
-                  className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-sidebar-foreground flex-1 text-left"
-                >
-                  Private
-                </button>
-              </div>
-              <button
+              <CollapsibleTrigger className="flex items-center gap-1 w-full text-xs font-medium text-muted-foreground hover:text-sidebar-foreground">
+                <ChevronRight className={cn("w-3 h-3 transition-transform", privateOpen && "rotate-90")} />
+                Private
+              </CollapsibleTrigger>
+              <button 
                 onClick={(e) => {
                   e.stopPropagation();
                   handleCreatePage();
@@ -244,28 +227,36 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
               </button>
             </div>
             <CollapsibleContent className="space-y-0.5 mt-1">
-              {pages
-                .filter(page => page.title !== '_System_Properties_DO_NOT_DELETE' && !page.title.startsWith('_'))
-                .map((page) => (
-                  <PageTreeItem
-                    key={page.id}
-                    page={page}
-                    currentPageId={currentPage}
-                    onPageChange={onPageChange}
-                  />
-                ))}
+              {pages.map((page) => (
+                <NavItem
+                  key={page.id}
+                  icon={getPageIcon(page.icon)}
+                  label={page.title}
+                  emoji={page.icon}
+                  onClick={() => onPageChange(page.id)}
+                  active={currentPage === page.id}
+                />
+              ))}
             </CollapsibleContent>
           </Collapsible>
 
-
+          {/* Templates Section */}
+          <Collapsible open={templatesOpen} onOpenChange={setTemplatesOpen} className="mt-6">
+            <CollapsibleTrigger className="flex items-center gap-1 px-2 py-1 w-full text-xs font-medium text-muted-foreground hover:text-sidebar-foreground">
+              <ChevronRight className={cn("w-3 h-3 transition-transform", templatesOpen && "rotate-90")} />
+              Templates
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-0.5 mt-1">
+              {/* Templates would be fetched similarly, for now empty or static */}
+              <div className="px-2 py-1 text-xs text-muted-foreground">No templates</div>
+            </CollapsibleContent>
+          </Collapsible>
 
         </div>
       </ScrollArea>
 
-
       {/* Bottom Section */}
       <div className="p-2 border-t border-sidebar-border space-y-0.5">
-        <NavItem icon={Plus} label="New Page" onClick={() => handleCreatePage()} />
         <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
           <DialogTrigger asChild>
             <NavItem icon={Settings} label="Settings" onClick={() => setIsSettingsOpen(true)} />
@@ -278,19 +269,20 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Email</Label>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <div className="space-y-0.5">
+                  <Label>Dark Mode</Label>
+                  <p className="text-xs text-muted-foreground">Toggle dark mode theme</p>
                 </div>
-                <Button variant="destructive" onClick={() => {
-                  supabase.auth.signOut();
-                  setIsSettingsOpen(false);
-                }}>
-                  Sign Out
-                </Button>
+                {/* Switch would go here */}
+                <div className="text-xs text-muted-foreground">System</div>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <div className="space-y-0.5">
+                  <Label>Notifications</Label>
+                  <p className="text-xs text-muted-foreground">Manage email notifications</p>
+                </div>
+                <div className="text-xs text-muted-foreground">Enabled</div>
               </div>
             </div>
             <DialogFooter>
@@ -298,14 +290,40 @@ export function AppSidebar({ currentPage, onPageChange }: SidebarProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        <Dialog open={isTrashOpen} onOpenChange={setIsTrashOpen}>
+          <DialogTrigger asChild>
+            <NavItem icon={Trash} label="Trash" onClick={() => setIsTrashOpen(true)} />
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Trash</DialogTitle>
+              <DialogDescription>
+                Pages in trash for you.
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="h-[300px]">
+              <div className="space-y-2">
+                {trash.length === 0 && <div className="text-center text-muted-foreground py-8">Trash is empty</div>}
+                {trash.map((page) => (
+                  <div key={page.id} className="flex items-center justify-between p-2 border rounded hover:bg-accent">
+                    <div className="flex items-center gap-2">
+                      <span>{page.icon || '📄'}</span>
+                      <span>{page.title}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => restorePage.mutate(page.id)}>Restore</Button>
+                      <Button size="sm" variant="destructive" onClick={() => permanentlyDeletePage.mutate(page.id)}>Delete</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
 
-
-
-
-
-
-
-
+        <NavItem icon={ShoppingBag} label="Marketplace" onClick={() => {}} />
+        <NavItem icon={Plus} label="New Page" onClick={() => handleCreatePage()} />
       </div>
     </aside>
   );
@@ -319,48 +337,36 @@ interface NavItemProps {
   badge?: string;
   count?: number;
   onClick: () => void;
-  onDelete?: () => void;
 }
 
-function NavItem({ icon: Icon, label, emoji, active, badge, count, onClick, onDelete }: NavItemProps) {
+function NavItem({ icon: Icon, label, emoji, active, badge, count, onClick }: NavItemProps) {
   return (
-    <div className={cn(
-      "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors group relative",
-      active
-        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-        : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-    )}>
-      <button
-        onClick={onClick}
-        className="flex-1 flex items-center gap-2 overflow-hidden"
-      >
-        {emoji ? (
-          <span className="w-5 text-center">{emoji}</span>
-        ) : (
-          <Icon className="w-4 h-4 text-muted-foreground" />
-        )}
-        <span className="flex-1 text-left truncate">{label}</span>
-        {badge && (
-          <span className="px-1.5 py-0.5 text-[10px] font-medium bg-info text-info-foreground rounded">
-            {badge}
-          </span>
-        )}
-        {count !== undefined && (
-          <span className="w-5 h-5 flex items-center justify-center text-xs bg-destructive text-destructive-foreground rounded-full">
-            {count}
-          </span>
-        )}
-      </button>
-      {onDelete && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
-          title="Delete page"
-        >
-          <Trash className="w-3 h-3" />
-        </button>
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors group",
+        active 
+          ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
       )}
-    </div>
+    >
+      {emoji ? (
+        <span className="w-5 text-center">{emoji}</span>
+      ) : (
+        <Icon className="w-4 h-4 text-muted-foreground" />
+      )}
+      <span className="flex-1 text-left truncate">{label}</span>
+      {badge && (
+        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-info text-info-foreground rounded">
+          {badge}
+        </span>
+      )}
+      {count !== undefined && (
+        <span className="w-5 h-5 flex items-center justify-center text-xs bg-destructive text-destructive-foreground rounded-full">
+          {count}
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -376,7 +382,7 @@ interface TeamSpaceItemProps {
 function TeamSpaceItem({ space, currentPage, onPageChange }: TeamSpaceItemProps) {
   const [open, setOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { createPage, permanentlyDeletePage } = useWorkspaceMutations();
+  const { createPage } = useWorkspaceMutations();
 
   const handleCreatePage = async () => {
     const newPage = await createPage.mutateAsync({ teamSpaceId: space.id });
@@ -390,22 +396,13 @@ function TeamSpaceItem({ space, currentPage, onPageChange }: TeamSpaceItemProps)
     <>
       <Collapsible open={open} onOpenChange={setOpen}>
         <div className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-sidebar-accent/50 transition-colors group/item">
-          <div className="flex items-center gap-2 w-full">
-            <CollapsibleTrigger asChild>
-              <div className="p-1 hover:bg-sidebar-accent rounded cursor-pointer transition-colors">
-                <ChevronRight className={cn("w-3 h-3 transition-transform text-muted-foreground", open && "rotate-90")} />
-              </div>
-            </CollapsibleTrigger>
-            <button
-              onClick={() => onPageChange(`teamspace/${space.id}`)}
-              className="flex items-center gap-2 text-sm text-sidebar-foreground flex-1 text-left truncate font-medium hover:underline"
-            >
-              <span>{space.icon}</span>
-              <span>{space.name}</span>
-            </button>
-          </div>
+          <CollapsibleTrigger className="flex items-center gap-2 text-sm text-sidebar-foreground w-full">
+            <ChevronRight className={cn("w-3 h-3 transition-transform", open && "rotate-90")} />
+            <span>{space.icon}</span>
+            <span className="flex-1 text-left truncate font-medium">{space.name}</span>
+          </CollapsibleTrigger>
           <div className="flex items-center opacity-0 group-hover/item:opacity-100 transition-opacity">
-            <button
+            <button 
               onClick={(e) => {
                 e.stopPropagation();
                 setSettingsOpen(true);
@@ -414,7 +411,7 @@ function TeamSpaceItem({ space, currentPage, onPageChange }: TeamSpaceItemProps)
             >
               <MoreHorizontal className="w-3 h-3" />
             </button>
-            <button
+            <button 
               onClick={(e) => {
                 e.stopPropagation();
                 handleCreatePage();
@@ -426,28 +423,22 @@ function TeamSpaceItem({ space, currentPage, onPageChange }: TeamSpaceItemProps)
           </div>
         </div>
         <CollapsibleContent className="ml-3 space-y-0.5 mt-0.5">
-          {space.pages?.filter((page: any) => page.title !== '_System_Properties_DO_NOT_DELETE' && !page.title.startsWith('_'))
-            .map((page: any) => (
-              <NavItem
-                key={page.id}
-                icon={FileText}
-                label={page.title}
-                emoji={page.icon}
-                onClick={() => onPageChange(page.id)}
-                active={currentPage === page.id}
-                onDelete={() => {
-                  if (confirm("Delete this page?")) {
-                    permanentlyDeletePage.mutate(page.id)
-                  }
-                }}
-              />
-            ))}
+          {space.pages?.map((page: any) => (
+            <NavItem
+              key={page.id}
+              icon={FileText}
+              label={page.title}
+              emoji={page.icon}
+              onClick={() => onPageChange(page.id)}
+              active={currentPage === page.id}
+            />
+          ))}
         </CollapsibleContent>
       </Collapsible>
-      <TeamSpaceSettings
-        teamSpace={space}
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
+      <TeamSpaceSettings 
+        teamSpace={space} 
+        open={settingsOpen} 
+        onOpenChange={setSettingsOpen} 
       />
     </>
   );

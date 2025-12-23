@@ -2,15 +2,24 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
-import { AuthProvider } from "./components/providers/AuthProvider";
-import { AuthLayout } from "./components/layout/AuthLayout";
-import { ProtectedLayout } from "./components/layout/ProtectedLayout";
+import { AuthProvider, useAuth } from "./components/providers/AuthProvider";
 
 const queryClient = new QueryClient();
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>; // Add a loading state fallback
+  }
+  if (!user) return <Navigate to="/login" />;
+  
+  return <>{children}</>;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -20,22 +29,27 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Public Routes - Only accessible when NOT logged in */}
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<Login />} />
-            </Route>
-
-            {/* Protected Routes - Only accessible when logged in */}
-            <Route element={<ProtectedLayout />}>
-              <Route path="/" element={<Index />} />
-              <Route path="/inbox" element={<Index view="inbox" />} />
-              <Route path="/meetings" element={<Index view="meetings" />} />
-              <Route path="/page/:pageId" element={<Index view="page" />} />
-              <Route path="/teamspace/:teamSpaceId" element={<Index view="teamspace" />} />
-              <Route path="/private" element={<Index view="private" />} />
-            </Route>
-
-            {/* Catch-all */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Index />
+              </ProtectedRoute>
+            } />
+            <Route path="/inbox" element={
+              <ProtectedRoute>
+                <Index view="inbox" />
+              </ProtectedRoute>
+            } />
+            <Route path="/meetings" element={
+              <ProtectedRoute>
+                <Index view="meetings" />
+              </ProtectedRoute>
+            } />
+            <Route path="/page/:pageId" element={
+              <ProtectedRoute>
+                <Index view="page" />
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

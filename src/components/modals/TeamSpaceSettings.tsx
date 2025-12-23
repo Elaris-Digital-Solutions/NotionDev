@@ -10,18 +10,7 @@ import { TeamSpace, TeamSpaceMember } from "@/types/workspace";
 import { Trash, UserPlus, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { useWorkspaceMutations } from "@/hooks/useWorkspaceMutations";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Database } from "@/types/supabase";
 
 interface TeamSpaceSettingsProps {
   teamSpace: TeamSpace;
@@ -32,7 +21,6 @@ interface TeamSpaceSettingsProps {
 export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSettingsProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { deleteTeamSpace } = useWorkspaceMutations();
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<'editor' | 'viewer'>('viewer');
 
@@ -40,37 +28,16 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['teamspace_members', teamSpace.id],
     queryFn: async () => {
-      // 1. Fetch relations safely
-      const { data: teamMembers, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('team_id', teamSpace.id);
-
+      const { data, error } = await supabase
+        .from('teamspace_members')
+        .select('*, user:profiles(email)') // Assuming profiles table exists and is linked
+        .eq('team_space_id', teamSpace.id);
+      
       if (error) throw error;
-
-      // 2. Fetch profiles safely if possible
-      const userIds = teamMembers.map((m: any) => m.user_id);
-      let profilesMap: Record<string, any> = {};
-
-      try {
-        if (userIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, email, full_name')
-            .in('id', userIds);
-
-          profiles?.forEach(p => { profilesMap[(p as any).id] = p; });
-        }
-      } catch (err) {
-        console.warn("Could not fetch profiles", err);
-      }
-
-      // 3. Merge data
-      return teamMembers.map((m: any) => ({
+      // Fallback if profiles not set up, just show ID
+      return data.map((m: any) => ({
         ...m,
-        id: m.team_id + m.user_id, // Composite key fallback
-        role: m.role,
-        user: profilesMap[m.user_id] || { email: `User ${m.user_id.slice(0, 4)}...` }
+        user: m.user || { email: 'Unknown User' }
       })) as TeamSpaceMember[];
     },
     enabled: open
@@ -85,20 +52,19 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
         .eq('email', inviteEmail)
         .single();
 
+      console.log('Profiles Query Result:', profiles);
+
       if (profileError || !profiles) throw new Error("User not found");
 
-      // 2. Add to team_members
-      // @ts-ignore
       const { error } = await supabase
         .from('team_members')
-        // @ts-ignore
         .insert({
           team_id: teamSpace.id,
-          user_id: (profiles as any).id,
+          user_id: profiles.id,
           role: inviteRole
         });
 
-      if (error) throw error;
+      console.log('Insert Result:', error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teamspace_members', teamSpace.id] });
@@ -110,13 +76,10 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
 
   const updateRole = useMutation({
     mutationFn: async ({ memberId, role }: { memberId: string, role: string }) => {
-      // @ts-ignore
       const { error } = await supabase
         .from('team_members')
-        // @ts-ignore
-        .update({ role })
-        .eq('team_id', teamSpace.id) // Composite key update needed usually, but using what we have
-        .eq('user_id', memberId); // memberId passed in mutation invocation needs to be user_id actually
+        .update({ role: role as 'editor' | 'viewer' } as { role: 'editor' | 'viewer' })
+        .eq('user_id', memberId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -128,10 +91,9 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
   const removeMember = useMutation({
     mutationFn: async (memberId: string) => {
       const { error } = await supabase
-        .from('team_members')
+        .from('teamspace_members')
         .delete()
-        .eq('team_id', teamSpace.id)
-        .eq('user_id', memberId);
+        .eq('id', memberId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -157,8 +119,8 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
             <div className="flex items-end gap-2 p-4 bg-muted/50 rounded-lg">
               <div className="flex-1 space-y-2">
                 <Label>Invite by Email</Label>
-                <Input
-                  placeholder="colleague@example.com"
+                <Input 
+                  placeholder="colleague@example.com" 
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                 />
@@ -196,12 +158,12 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
                       <div className="text-xs text-muted-foreground capitalize">{member.role}</div>
                     </div>
                   </div>
-
+                  
                   {isOwner && member.role !== 'owner' && (
                     <div className="flex items-center gap-2">
-                      <Select
-                        value={member.role}
-                        onValueChange={(val) => updateRole.mutate({ memberId: member.user_id, role: val })}
+                      <Select 
+                        value={member.role} 
+                        onValueChange={(val) => updateRole.mutate({ memberId: member.id, role: val })}
                       >
                         <SelectTrigger className="w-24 h-8"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -209,70 +171,21 @@ export function TeamSpaceSettings({ teamSpace, open, onOpenChange }: TeamSpaceSe
                           <SelectItem value="viewer">Viewer</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Button
+                      <Button 
                         variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => removeMember.mutate(member.user_id)}
+                        onClick={() => removeMember.mutate(member.id)}
+                        className="h-8 w-8 p-0 rounded-full hover:bg-destructive/10"
                       >
-                        <Trash className="w-4 h-4" />
+                        <Trash className="w-4 h-4 text-destructive" />
                       </Button>
-                    </div>
-                  )}
-                  {(!isOwner || member.role === 'owner') && (
-                    <div className="text-sm text-muted-foreground px-3">
-                      {member.role}
                     </div>
                   )}
                 </div>
               ))}
             </div>
           </div>
-
-          {/* Danger Zone */}
-          {isOwner && (
-            <div className="pt-6 mt-6 border-t">
-              <h3 className="text-sm font-medium text-destructive mb-4">Danger Zone</h3>
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-center justify-between">
-                <div>
-                  <div className="font-medium text-sm text-destructive">Delete Teamspace</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Permanently delete this teamspace and all its pages.
-                  </div>
-                </div>
-
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">Delete</Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the
-                        <span className="font-semibold"> {teamSpace.name} </span>
-                        teamspace and remove all associated data.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        onClick={() => {
-                          deleteTeamSpace.mutate(teamSpace.id);
-                          onOpenChange(false);
-                        }}
-                      >
-                        Delete Teamspace
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
-          )}
         </div>
       </DialogContent>
-    </Dialog >
+    </Dialog>
   );
 }
