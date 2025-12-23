@@ -40,8 +40,12 @@ export default function Login() {
             data: {
               full_name: fullName,
             },
+            emailRedirectTo: window.location.origin,
           },
         });
+
+        console.log("Sign up response:", { data, error });
+
         if (error) throw error;
 
         // If email confirmation is enabled, session will be null.
