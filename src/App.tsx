@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import { AuthProvider, useAuth } from "./components/providers/AuthProvider";
+import { AuthLayout } from "./components/layout/AuthLayout";
 
 const queryClient = new QueryClient();
 
@@ -32,7 +33,9 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/login" element={<Login />} />
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<Login />} />
+              </Route>
               <Route path="/" element={
                 <ProtectedRoute>
                   <Index />
